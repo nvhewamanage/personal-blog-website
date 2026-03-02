@@ -14,5 +14,18 @@
     "hbs": "^4.2.0",
     "nodemon": "^3.1.11"
   },
+  "devDependencies": {
+    "autoprefixer": "^10.4.27",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.2.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nvhewamanage/portfolio-website.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nvhewamanage/portfolio-website/issues"
+  },
+  "homepage": "https://github.com/nvhewamanage/portfolio-website#readme",
   "description": ""
 }

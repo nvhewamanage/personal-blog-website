@@ -4,630 +4,445 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>James Kamerun — Personal Website</title>
-
-  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-
-  <!-- Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-
-  <!-- Tailwind CDN (for development — replace with built /public/style.css after `npm run build`) -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            display: ['"DM Serif Display"', 'serif'],
-            body: ['"Outfit"', 'sans-serif'],
-          },
-          colors: {
-            accent: '#e8154a',
-            dark: '#1a1a2e',
-            bg: '#eef1f5',
-          },
-        }
-      }
-    }
-  </script>
-
-  <style>
-    :root { --nav-h: 72px; }
-    html { scroll-behavior: smooth; }
-    body { font-family: 'Outfit', sans-serif; background: #eef1f5; color: #1a1a2e; overflow-x: hidden; }
-
-    /* ── Navbar ── */
-    #navbar {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 50;
-      height: var(--nav-h);
-      background: rgba(238,241,245,0.88);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      transition: background 0.3s ease, box-shadow 0.3s ease;
-    }
-    #navbar.scrolled {
-      background: rgba(255,255,255,0.96);
-      box-shadow: 0 2px 20px rgba(26,26,46,0.08);
-    }
-    .nav-link {
-      font-size: 12.5px; font-weight: 500; letter-spacing: .5px; text-transform: uppercase;
-      color: #6b7280; padding: 7px 14px; border-radius: 6px;
-      transition: color .2s, background .2s;
-    }
-    .nav-link:hover { color: #1a1a2e; background: rgba(26,26,46,.05); }
-    .nav-link.active { color: #fff; background: #1a1a2e; }
-
-    /* ── Brush blob ── */
-    .brush {
-      position: absolute; z-index: 0;
-      background: linear-gradient(135deg, rgba(200,210,220,.35), rgba(180,195,210,.15));
-      border-radius: 60% 40% 60% 40% / 40% 60% 40% 60%;
-      transform: rotate(-8deg);
-    }
-
-    /* ── Social pill ── */
-    .social-pill {
-      display: flex; align-items: center; gap: 8px;
-      padding: 9px 16px; border-radius: 50px;
-      font-size: 13px; font-weight: 500; color: #1a1a2e;
-      background: #eef1f5; border: 1.5px solid transparent;
-      transition: all .25s ease; text-decoration: none;
-    }
-    .social-pill:hover {
-      background: #fde8ee; color: #e8154a;
-      border-color: #e8154a; transform: translateY(-2px);
-    }
-
-    /* ── Gallery grid ── */
-    .gallery-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      grid-auto-rows: 230px;
-      gap: 16px;
-    }
-    .g-tall { grid-row: span 2; }
-    .g-wide { grid-column: span 2; }
-    .gallery-item { position: relative; border-radius: 16px; overflow: hidden; cursor: pointer; transition: transform .3s ease, box-shadow .3s ease; }
-    .gallery-item:hover { transform: translateY(-4px); box-shadow: 0 12px 36px rgba(26,26,46,.12); }
-    .g-ph { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: rgba(255,255,255,.75); font-size: 13px; font-weight: 500; }
-    .g-ph i { font-size: 30px; }
-    .g-ov {
-      position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end;
-      padding: 20px; opacity: 0; transition: opacity .3s ease; color: #fff;
-      background: linear-gradient(to top, rgba(26,26,46,.75) 0%, transparent 60%);
-    }
-    .gallery-item:hover .g-ov { opacity: 1; }
-    .filter-btn {
-      padding: 8px 20px; background: #fff; border: 1.5px solid transparent;
-      border-radius: 50px; font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 500;
-      color: #6b7280; cursor: pointer; transition: all .2s ease;
-    }
-    .filter-btn:hover { border-color: #1a1a2e; color: #1a1a2e; }
-    .filter-btn.active { background: #1a1a2e; color: #fff; border-color: #1a1a2e; }
-
-    /* ── Blog ── */
-    .blog-card { background: #fff; border-radius: 16px; overflow: hidden; transition: transform .3s ease, box-shadow .3s ease; box-shadow: 0 2px 16px rgba(26,26,46,.06); display: flex; flex-direction: column; }
-    .blog-card:hover { transform: translateY(-5px); box-shadow: 0 8px 32px rgba(26,26,46,.1); }
-    .blog-tag { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 3px 10px; border-radius: 50px; background: #fde8ee; color: #e8154a; }
-    .blog-read-more { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #1a1a2e; text-decoration: none; transition: color .2s, gap .2s; width: fit-content; }
-    .blog-read-more:hover { color: #e8154a; gap: 10px; }
-
-    /* ── Timeline ── */
-    .tl-wrap { position: relative; }
-    .tl-wrap::before { content: ''; position: absolute; left: 76px; top: 0; bottom: 0; width: 2px; background: linear-gradient(to bottom, #e8154a, transparent); }
-    .tl-item { display: grid; grid-template-columns: 72px 24px 1fr; gap: 0 20px; margin-bottom: 36px; align-items: flex-start; }
-    .tl-dot { width: 16px; height: 16px; background: #e8154a; border-radius: 50%; border: 3px solid #eef1f5; margin-top: 22px; flex-shrink: 0; }
-    .tl-card { background: #fff; border-radius: 16px; padding: 22px 24px; box-shadow: 0 2px 16px rgba(26,26,46,.06); transition: transform .25s ease; }
-    .tl-card:hover { transform: translateX(4px); }
-
-    /* ── Contact ── */
-    .contact-input {
-      width: 100%; padding: 13px 18px; border-radius: 12px;
-      font-family: 'Outfit', sans-serif; font-size: 14px; color: #1a1a2e;
-      background: #f7f9fc; border: 1.5px solid #e5e7eb; outline: none;
-      transition: border-color .2s, box-shadow .2s; resize: vertical;
-    }
-    .contact-input:focus { border-color: #1a1a2e; box-shadow: 0 0 0 3px rgba(26,26,46,.08); }
-
-    /* ── Animations ── */
-    @keyframes fadeUp { from { opacity:0; transform:translateY(22px); } to { opacity:1; transform:translateY(0); } }
-    @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-    @keyframes scrollBounce { 0%,100%{ transform:translateX(-50%) translateY(0); } 50%{ transform:translateX(-50%) translateY(8px); } }
-    @keyframes pulseDot { 0%,100%{ box-shadow:0 0 0 3px rgba(34,197,94,.25); } 50%{ box-shadow:0 0 0 6px rgba(34,197,94,.1); } }
-
-    .anim-1 { animation: fadeUp .7s .1s both; }
-    .anim-2 { animation: fadeUp .7s .2s both; }
-    .anim-3 { animation: fadeUp .7s .3s both; }
-    .anim-4 { animation: fadeUp .7s .4s both; }
-    .hero-img-wrap { animation: fadeIn 1s .2s both; }
-    .scroll-hint { position:absolute; bottom:28px; left:50%; animation: scrollBounce 2s infinite; }
-    .avail-dot { width:10px; height:10px; background:#22c55e; border-radius:50%; flex-shrink:0; box-shadow:0 0 0 3px rgba(34,197,94,.25); animation:pulseDot 2s infinite; }
-
-    .reveal { opacity:0; transform:translateY(20px); transition:opacity .6s ease, transform .6s ease; }
-    .reveal.visible { opacity:1; transform:translateY(0); }
-
-    /* ── Responsive ── */
-    @media(max-width:1024px){ .gallery-grid{ grid-template-columns:repeat(3,1fr); } .g-wide{ grid-column:span 1; } }
-    @media(max-width:768px){
-      .desktop-nav{ display:none !important; }
-      .hamburger-btn{ display:flex !important; }
-      .lets-talk-btn{ display:none !important; }
-      .gallery-grid{ grid-template-columns:repeat(2,1fr); }
-      .g-tall{ grid-row:span 1; }
-      .hero-wrap{ flex-direction:column-reverse; padding-left:24px; padding-right:24px; text-align:center; }
-      .hero-img-wrap{ min-height:260px; }
-      .hero-desc{ margin:0 auto 28px; }
-      .tl-wrap::before{ left:68px; }
-      .tl-item{ grid-template-columns:64px 20px 1fr; gap:0 12px; }
-    }
-    @media(max-width:480px){ .gallery-grid{ grid-template-columns:1fr 1fr; } }
-  </style>
+  <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body>
 
-<!-- =============================================
-  NAVBAR — Fixed, auto-highlights active section
-  ============================================= -->
-<nav id="navbar">
-  <div class="max-w-7xl mx-auto h-full flex items-center gap-6 px-10">
-    <a href="#home" class="font-display text-xl tracking-widest text-dark mr-auto flex-shrink-0">LOGO</a>
+  <!-- ========== NAVBAR ========== -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="#home" class="nav-logo">LOGO</a>
 
-    <!-- Desktop nav links -->
-    <ul class="desktop-nav flex items-center gap-1">
-      <li><a href="#home"    class="nav-link active" data-section="home">Home</a></li>
-      <li><a href="#about"   class="nav-link" data-section="about">About</a></li>
-      <li><a href="#gallery" class="nav-link" data-section="gallery">Gallery</a></li>
-      <li><a href="#blog"    class="nav-link" data-section="blog">My Blog</a></li>
-      <li><a href="#updates" class="nav-link" data-section="updates">Updates</a></li>
-      <li><a href="#contact" class="nav-link" data-section="contact">Contact</a></li>
-    </ul>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#home"    class="nav-link" data-section="home">Home</a></li>
+        <li><a href="#about"   class="nav-link" data-section="about">About</a></li>
+        <li><a href="#gallery" class="nav-link" data-section="gallery">Gallery</a></li>
+        <li><a href="#blog"    class="nav-link" data-section="blog">My Blog</a></li>
+        <li><a href="#updates" class="nav-link" data-section="updates">Updates</a></li>
+        <li><a href="#contact" class="nav-link" data-section="contact">Contact</a></li>
+      </ul>
 
-    <!-- Let's Talk button -->
-    <a href="#contact" class="lets-talk-btn flex-shrink-0 px-5 py-2.5 rounded-full text-[13px] font-semibold text-white transition-all duration-200"
-       style="background:#e8154a"
-       onmouseover="this.style.background='#c5103d';this.style.transform='translateY(-1px)'"
-       onmouseout="this.style.background='#e8154a';this.style.transform=''">
-      Let's Talk
-    </a>
+      <a href="#contact" class="btn-lets-talk scroll-link">Let's Talk</a>
 
-    <!-- Hamburger (mobile) -->
-    <button class="hamburger-btn hidden flex-col gap-1.5 cursor-pointer bg-transparent border-none p-1 ml-auto" id="hamburger" aria-label="Menu">
-      <span class="block w-6 h-0.5 bg-dark rounded transition-all duration-300"></span>
-      <span class="block w-6 h-0.5 bg-dark rounded transition-all duration-300"></span>
-      <span class="block w-6 h-0.5 bg-dark rounded transition-all duration-300"></span>
-    </button>
-  </div>
-</nav>
-
-<!-- Mobile menu -->
-<div id="mobileMenu" class="fixed left-0 right-0 bg-white z-40 flex-col px-6 py-4 gap-1 shadow-lg transition-all duration-300" style="top:var(--nav-h); transform:translateY(-110%); display:flex;">
-  <a href="#home"    class="nav-link text-left" onclick="closeMobile()">Home</a>
-  <a href="#about"   class="nav-link text-left" onclick="closeMobile()">About</a>
-  <a href="#gallery" class="nav-link text-left" onclick="closeMobile()">Gallery</a>
-  <a href="#blog"    class="nav-link text-left" onclick="closeMobile()">My Blog</a>
-  <a href="#updates" class="nav-link text-left" onclick="closeMobile()">Updates</a>
-  <a href="#contact" class="nav-link text-left" onclick="closeMobile()">Contact</a>
-  <a href="#contact" class="mt-2 px-5 py-2.5 rounded-full text-[13px] font-semibold text-white text-center" style="background:#e8154a" onclick="closeMobile()">Let's Talk</a>
-</div>
-
-
-<!-- =============================================
-  SECTION 1 — HOME / HERO
-  ============================================= -->
-<section id="home" class="min-h-screen relative overflow-hidden flex items-center" style="padding-top:var(--nav-h);">
-  <div class="hero-wrap max-w-7xl mx-auto w-full flex items-center gap-10 px-20 py-10">
-
-    <!-- Text Content -->
-    <div class="flex-1 max-w-xl">
-      <p class="text-gray-500 text-sm mb-3 tracking-wide anim-1">Hello</p>
-      <h1 class="font-display text-5xl md:text-6xl leading-tight mb-5 anim-2">
-        I'm <span style="color:#e8154a">James</span> Kamerun
-      </h1>
-      <p class="hero-desc text-gray-500 text-[15px] leading-relaxed max-w-sm mb-9 anim-3">
-        Welcome to my personal space on the web. I share my thoughts, creative work,
-        and life updates here — a little corner of the internet that's purely mine.
-      </p>
-
-      <!-- Social Widget -->
-      <div class="anim-4 bg-white rounded-2xl p-5 inline-block" style="box-shadow:0 8px 32px rgba(26,26,46,.08)">
-        <p class="text-[10px] font-bold tracking-[2px] uppercase text-gray-400 mb-3">Find me on</p>
-        <div class="flex flex-wrap gap-2">
-          <a href="#" class="social-pill"><i class="fa-brands fa-instagram text-[15px]"></i> Instagram</a>
-          <a href="#" class="social-pill"><i class="fa-brands fa-x-twitter text-[15px]"></i> Twitter</a>
-          <a href="#" class="social-pill"><i class="fa-brands fa-linkedin-in text-[15px]"></i> LinkedIn</a>
-          <a href="#" class="social-pill"><i class="fa-brands fa-github text-[15px]"></i> GitHub</a>
-        </div>
-      </div>
+      <button class="nav-hamburger" id="hamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
     </div>
+  </nav>
 
-    <!-- Hero Image -->
-    <div class="hero-img-wrap flex-1 relative flex justify-center items-end min-h-[480px]">
-      <div class="brush" style="bottom:0;right:0;width:88%;height:78%;"></div>
-      <img src="images/profile.png" alt="James Kamerun"
-           class="relative z-10 max-h-[500px] w-auto object-contain"
-           style="filter:drop-shadow(0 20px 40px rgba(26,26,46,.12))"/>
-    </div>
-  </div>
+  <main>
 
-  <!-- Scroll hint arrow -->
-  <div class="scroll-hint text-gray-400 text-sm cursor-pointer" onclick="document.getElementById('about').scrollIntoView({behavior:'smooth'})">
-    <i class="fa-solid fa-chevron-down"></i>
-  </div>
-</section>
+    <!-- ========== HOME ========== -->
+    <section class="section hero" id="home">
+      <div class="hero-content">
+        <p class="hero-greeting">Hello</p>
+        <h1 class="hero-title">I'm <span class="accent">James</span> Kamerun</h1>
+        <p class="hero-desc">
+          Welcome to my personal space on the web. I share my thoughts, creative work,
+          and life updates here — a little corner of the internet that's purely mine.
+        </p>
 
-
-<!-- =============================================
-  SECTION 2 — ABOUT
-  ============================================= -->
-<section id="about" class="min-h-screen relative" style="padding-top:calc(var(--nav-h) + 60px); padding-bottom:80px; background:#f7f9fc;">
-  <div class="max-w-6xl mx-auto px-10 flex items-center gap-16">
-
-    <!-- Photo -->
-    <div class="flex-shrink-0 w-5/12 reveal">
-      <div class="relative flex justify-center items-end" style="height:460px;">
-        <div class="brush" style="bottom:0;right:0;width:100%;height:85%;border-radius:50% 50% 50% 50% / 40% 40% 60% 60%;transform:rotate(-5deg);"></div>
-        <img src="images/profile.png" alt="James Kamerun"
-             class="relative z-10 max-h-[430px] object-contain"
-             style="filter:drop-shadow(0 16px 32px rgba(26,26,46,.1))"/>
-      </div>
-    </div>
-
-    <!-- Content -->
-    <div class="flex-1 reveal" style="transition-delay:.15s">
-      <p class="text-[11px] font-bold tracking-[2px] uppercase mb-3" style="color:#e8154a">About Me</p>
-      <h2 class="font-display text-4xl md:text-5xl mb-6">
-        A little bit about <span style="color:#e8154a">myself</span>
-      </h2>
-      <p class="text-gray-500 text-[15px] leading-relaxed mb-4">
-        Hey! I'm James, a creative individual with a passion for storytelling, photography,
-        and building things online. Based in the world, always exploring. I believe in living
-        intentionally and sharing authentic moments.
-      </p>
-      <p class="text-gray-500 text-[15px] leading-relaxed mb-8">
-        When I'm not writing or shooting photos, you'll find me hiking trails,
-        experimenting in the kitchen, or deep in a good book. This website is where
-        I document the journey.
-      </p>
-
-      <!-- Stats -->
-      <div class="flex gap-10 mb-10 flex-wrap">
-        <div>
-          <div class="font-display text-4xl" style="color:#1a1a2e">12+</div>
-          <div class="text-sm text-gray-400 mt-1">Years of journaling</div>
-        </div>
-        <div>
-          <div class="font-display text-4xl" style="color:#1a1a2e">340</div>
-          <div class="text-sm text-gray-400 mt-1">Blog posts written</div>
-        </div>
-        <div>
-          <div class="font-display text-4xl" style="color:#1a1a2e">28</div>
-          <div class="text-sm text-gray-400 mt-1">Countries visited</div>
+        <div class="social-widget">
+          <div class="social-widget__label">Find me on</div>
+          <div class="social-widget__links">
+            <a href="#" class="social-pill" aria-label="Instagram">
+              <i class="fa-brands fa-instagram"></i><span>Instagram</span>
+            </a>
+            <a href="#" class="social-pill" aria-label="Twitter">
+              <i class="fa-brands fa-x-twitter"></i><span>Twitter</span>
+            </a>
+            <a href="#" class="social-pill" aria-label="LinkedIn">
+              <i class="fa-brands fa-linkedin-in"></i><span>LinkedIn</span>
+            </a>
+            <a href="#" class="social-pill" aria-label="GitHub">
+              <i class="fa-brands fa-github"></i><span>GitHub</span>
+            </a>
+          </div>
         </div>
       </div>
 
-      <a href="#contact" class="inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold text-white transition-all duration-200"
-         style="background:#1a1a2e"
-         onmouseover="this.style.background='#e8154a';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(232,21,74,.3)'"
-         onmouseout="this.style.background='#1a1a2e';this.style.transform='';this.style.boxShadow=''">
-        Get In Touch
+      <div class="hero-image-wrap">
+        <div class="brush-stroke"></div>
+        <img src="images/profile.png" alt="James Kamerun" class="hero-photo"/>
+      </div>
+
+      <a href="#about" class="hero-scroll-hint scroll-link" aria-label="Scroll down">
+        <i class="fa-solid fa-chevron-down"></i>
       </a>
-    </div>
-  </div>
-</section>
+    </section>
 
-
-<!-- =============================================
-  SECTION 3 — GALLERY
-  ============================================= -->
-<section id="gallery" style="padding-top:calc(var(--nav-h) + 60px); padding-bottom:80px;">
-  <div class="max-w-6xl mx-auto px-10 text-center mb-10 reveal">
-    <p class="text-[11px] font-bold tracking-[2px] uppercase mb-3" style="color:#e8154a">Visual Stories</p>
-    <h2 class="font-display text-4xl md:text-5xl mb-4">My <span style="color:#e8154a">Gallery</span></h2>
-    <p class="text-gray-500 text-base max-w-md mx-auto">A curated collection of moments captured through my lens.</p>
-  </div>
-
-  <!-- Filters -->
-  <div class="max-w-6xl mx-auto px-10 flex flex-wrap gap-2 mb-8 reveal" style="transition-delay:.1s">
-    <button class="filter-btn active" data-filter="all">All</button>
-    <button class="filter-btn" data-filter="travel">Travel</button>
-    <button class="filter-btn" data-filter="nature">Nature</button>
-    <button class="filter-btn" data-filter="portrait">Portrait</button>
-    <button class="filter-btn" data-filter="urban">Urban</button>
-  </div>
-
-  <!-- Grid -->
-  <div class="max-w-6xl mx-auto px-10 gallery-grid" id="galleryGrid">
-    <div class="gallery-item" data-cat="travel">
-      <div class="g-ph" style="background:linear-gradient(135deg,#e8d5c4,#c9a98d)"><i class="fa-solid fa-mountain-sun"></i><span>Mountain Trails</span></div>
-      <div class="g-ov"><p class="font-semibold text-sm">Mountain Trails</p><span class="text-xs opacity-70">Travel</span></div>
-    </div>
-    <div class="gallery-item g-tall" data-cat="portrait">
-      <div class="g-ph" style="background:linear-gradient(135deg,#c4d8e8,#8dafc9)"><i class="fa-solid fa-user"></i><span>Golden Hour</span></div>
-      <div class="g-ov"><p class="font-semibold text-sm">Golden Hour</p><span class="text-xs opacity-70">Portrait</span></div>
-    </div>
-    <div class="gallery-item" data-cat="urban">
-      <div class="g-ph" style="background:linear-gradient(135deg,#d4e8c4,#9dc98d)"><i class="fa-solid fa-city"></i><span>City Lights</span></div>
-      <div class="g-ov"><p class="font-semibold text-sm">City Lights</p><span class="text-xs opacity-70">Urban</span></div>
-    </div>
-    <div class="gallery-item g-wide" data-cat="nature">
-      <div class="g-ph" style="background:linear-gradient(135deg,#e8c4d8,#c98db8)"><i class="fa-solid fa-leaf"></i><span>Morning Mist</span></div>
-      <div class="g-ov"><p class="font-semibold text-sm">Morning Mist</p><span class="text-xs opacity-70">Nature</span></div>
-    </div>
-    <div class="gallery-item" data-cat="travel">
-      <div class="g-ph" style="background:linear-gradient(135deg,#e8e4c4,#c9c38d)"><i class="fa-solid fa-plane"></i><span>Coastal Roads</span></div>
-      <div class="g-ov"><p class="font-semibold text-sm">Coastal Roads</p><span class="text-xs opacity-70">Travel</span></div>
-    </div>
-    <div class="gallery-item" data-cat="nature">
-      <div class="g-ph" style="background:linear-gradient(135deg,#c4e8e4,#8dc9c3)"><i class="fa-solid fa-water"></i><span>Still Waters</span></div>
-      <div class="g-ov"><p class="font-semibold text-sm">Still Waters</p><span class="text-xs opacity-70">Nature</span></div>
-    </div>
-    <div class="gallery-item" data-cat="urban">
-      <div class="g-ph" style="background:linear-gradient(135deg,#d8c4e8,#b38dc9)"><i class="fa-solid fa-building"></i><span>Street Art</span></div>
-      <div class="g-ov"><p class="font-semibold text-sm">Street Art</p><span class="text-xs opacity-70">Urban</span></div>
-    </div>
-    <div class="gallery-item" data-cat="portrait">
-      <div class="g-ph" style="background:linear-gradient(135deg,#e8c4c4,#c98d8d)"><i class="fa-solid fa-face-smile"></i><span>Candid Moments</span></div>
-      <div class="g-ov"><p class="font-semibold text-sm">Candid Moments</p><span class="text-xs opacity-70">Portrait</span></div>
-    </div>
-  </div>
-</section>
-
-
-<!-- =============================================
-  SECTION 4 — MY BLOG
-  ============================================= -->
-<section id="blog" style="padding-top:calc(var(--nav-h) + 60px); padding-bottom:80px; background:#f7f9fc;">
-  <div class="max-w-6xl mx-auto px-10 text-center mb-12 reveal">
-    <p class="text-[11px] font-bold tracking-[2px] uppercase mb-3" style="color:#e8154a">Written Words</p>
-    <h2 class="font-display text-4xl md:text-5xl mb-4">My <span style="color:#e8154a">Blog</span></h2>
-    <p class="text-gray-500 text-base max-w-md mx-auto">Thoughts, reflections, and stories from everyday life.</p>
-  </div>
-
-  <div class="max-w-6xl mx-auto px-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    <!-- Featured post -->
-    <article class="blog-card lg:col-span-3 flex-row! reveal" style="flex-direction:row;">
-      <div class="flex-shrink-0 flex items-center justify-center" style="background:linear-gradient(135deg,#f5e6d3,#e8c9a0);width:300px;min-height:220px;border-radius:16px 0 0 16px;">
-        <i class="fa-solid fa-pen-nib text-5xl" style="color:rgba(255,255,255,.7)"></i>
-      </div>
-      <div class="p-8 flex flex-col gap-3 flex-1 bg-white" style="border-radius:0 16px 16px 0">
-        <span class="blog-tag">Life</span>
-        <h3 class="font-display text-2xl" style="color:#1a1a2e">The Art of Slowing Down in a Fast World</h3>
-        <p class="text-gray-400 text-sm leading-relaxed flex-1">We live in an age that glorifies busyness. But what happens when we dare to pause and simply breathe? This is what I learned from a month offline...</p>
-        <div class="flex gap-5 text-xs text-gray-400">
-          <span><i class="fa-regular fa-calendar mr-1.5"></i>Feb 15, 2026</span>
-          <span><i class="fa-regular fa-clock mr-1.5"></i>6 min read</span>
-        </div>
-        <a href="#" class="blog-read-more">Read more <i class="fa-solid fa-arrow-right text-xs"></i></a>
-      </div>
-    </article>
-
-    <article class="blog-card reveal" style="transition-delay:.05s">
-      <div class="flex items-center justify-center" style="background:linear-gradient(135deg,#d3e6f5,#a0c9e8);height:180px;">
-        <i class="fa-solid fa-camera text-4xl" style="color:rgba(255,255,255,.7)"></i>
-      </div>
-      <div class="p-6 flex flex-col gap-3 flex-1">
-        <span class="blog-tag">Photography</span>
-        <h3 class="font-display text-xl" style="color:#1a1a2e">What My Camera Taught Me About Patience</h3>
-        <p class="text-gray-400 text-sm leading-relaxed flex-1">Great shots rarely happen instantly. They're earned through waiting, watching, and learning to see differently...</p>
-        <div class="flex gap-4 text-xs text-gray-400">
-          <span><i class="fa-regular fa-calendar mr-1"></i>Jan 30, 2026</span>
-          <span><i class="fa-regular fa-clock mr-1"></i>4 min</span>
-        </div>
-        <a href="#" class="blog-read-more">Read more <i class="fa-solid fa-arrow-right text-xs"></i></a>
-      </div>
-    </article>
-
-    <article class="blog-card reveal" style="transition-delay:.1s">
-      <div class="flex items-center justify-center" style="background:linear-gradient(135deg,#e6f5d3,#c9e8a0);height:180px;">
-        <i class="fa-solid fa-map-location-dot text-4xl" style="color:rgba(255,255,255,.7)"></i>
-      </div>
-      <div class="p-6 flex flex-col gap-3 flex-1">
-        <span class="blog-tag">Travel</span>
-        <h3 class="font-display text-xl" style="color:#1a1a2e">Hidden Gems: Towns You'll Never Find on Lists</h3>
-        <p class="text-gray-400 text-sm leading-relaxed flex-1">Every traveler dreams of discovering untouched places. Here are five of my most cherished off-the-radar destinations...</p>
-        <div class="flex gap-4 text-xs text-gray-400">
-          <span><i class="fa-regular fa-calendar mr-1"></i>Jan 10, 2026</span>
-          <span><i class="fa-regular fa-clock mr-1"></i>8 min</span>
-        </div>
-        <a href="#" class="blog-read-more">Read more <i class="fa-solid fa-arrow-right text-xs"></i></a>
-      </div>
-    </article>
-
-    <article class="blog-card reveal" style="transition-delay:.15s">
-      <div class="flex items-center justify-center" style="background:linear-gradient(135deg,#f5d3e6,#e8a0c9);height:180px;">
-        <i class="fa-solid fa-book-open text-4xl" style="color:rgba(255,255,255,.7)"></i>
-      </div>
-      <div class="p-6 flex flex-col gap-3 flex-1">
-        <span class="blog-tag">Reflection</span>
-        <h3 class="font-display text-xl" style="color:#1a1a2e">Books That Changed How I See People</h3>
-        <p class="text-gray-400 text-sm leading-relaxed flex-1">A short list of reads that expanded my empathy, challenged my assumptions, and made me a better listener...</p>
-        <div class="flex gap-4 text-xs text-gray-400">
-          <span><i class="fa-regular fa-calendar mr-1"></i>Dec 22, 2025</span>
-          <span><i class="fa-regular fa-clock mr-1"></i>5 min</span>
-        </div>
-        <a href="#" class="blog-read-more">Read more <i class="fa-solid fa-arrow-right text-xs"></i></a>
-      </div>
-    </article>
-  </div>
-</section>
-
-
-<!-- =============================================
-  SECTION 5 — UPDATES
-  ============================================= -->
-<section id="updates" style="padding-top:calc(var(--nav-h) + 60px); padding-bottom:80px;">
-  <div class="max-w-3xl mx-auto px-10 text-center mb-12 reveal">
-    <p class="text-[11px] font-bold tracking-[2px] uppercase mb-3" style="color:#e8154a">What's New</p>
-    <h2 class="font-display text-4xl md:text-5xl mb-4"><span style="color:#e8154a">Updates</span></h2>
-    <p class="text-gray-500 text-base">A living log — new projects, milestones, and life moments.</p>
-  </div>
-
-  <!-- Timeline -->
-  <div class="max-w-3xl mx-auto px-10 tl-wrap">
-
-    <div class="tl-item reveal">
-      <div class="text-xs font-semibold text-gray-400 text-right pt-5 leading-tight">March<br>2026</div>
-      <div class="tl-dot"></div>
-      <div class="tl-card">
-        <span class="inline-block text-[10px] font-bold tracking-widest uppercase px-2.5 py-1 rounded-full" style="background:#d4f7e7;color:#0d7a3f">New</span>
-        <h3 class="font-display text-xl mt-2 mb-2" style="color:#1a1a2e">Launched My Personal Website 🎉</h3>
-        <p class="text-sm text-gray-400 leading-relaxed">After months of planning and designing, my personal corner of the web is finally live. Excited to share my journey, photography, and writing here!</p>
-      </div>
-    </div>
-
-    <div class="tl-item reveal" style="transition-delay:.07s">
-      <div class="text-xs font-semibold text-gray-400 text-right pt-5 leading-tight">Feb<br>2026</div>
-      <div class="tl-dot"></div>
-      <div class="tl-card">
-        <span class="inline-block text-[10px] font-bold tracking-widest uppercase px-2.5 py-1 rounded-full" style="background:#dde8fb;color:#2353b5">Travel</span>
-        <h3 class="font-display text-xl mt-2 mb-2" style="color:#1a1a2e">Back from 3 Weeks in Southeast Asia</h3>
-        <p class="text-sm text-gray-400 leading-relaxed">Visited Vietnam, Cambodia, and Thailand. Shot over 2,000 photos. Full travel diary coming soon. My soul feels refreshed.</p>
-      </div>
-    </div>
-
-    <div class="tl-item reveal" style="transition-delay:.14s">
-      <div class="text-xs font-semibold text-gray-400 text-right pt-5 leading-tight">Jan<br>2026</div>
-      <div class="tl-dot"></div>
-      <div class="tl-card">
-        <span class="inline-block text-[10px] font-bold tracking-widest uppercase px-2.5 py-1 rounded-full" style="background:#fde8ee;color:#e8154a">Project</span>
-        <h3 class="font-display text-xl mt-2 mb-2" style="color:#1a1a2e">Started a 365-Day Photography Challenge</h3>
-        <p class="text-sm text-gray-400 leading-relaxed">One photo every day for a full year. Follow along on Instagram and in the Gallery. Day 1 was a foggy sunrise from my balcony.</p>
-      </div>
-    </div>
-
-    <div class="tl-item reveal" style="transition-delay:.21s">
-      <div class="text-xs font-semibold text-gray-400 text-right pt-5 leading-tight">Dec<br>2025</div>
-      <div class="tl-dot"></div>
-      <div class="tl-card">
-        <span class="inline-block text-[10px] font-bold tracking-widest uppercase px-2.5 py-1 rounded-full" style="background:#fef3d7;color:#b57f0a">Milestone</span>
-        <h3 class="font-display text-xl mt-2 mb-2" style="color:#1a1a2e">Hit 10,000 Newsletter Subscribers</h3>
-        <p class="text-sm text-gray-400 leading-relaxed">My Sunday letter now reaches over 10,000 readers every week. Genuinely overwhelmed by the love. Thank you all.</p>
-      </div>
-    </div>
-
-    <div class="tl-item reveal" style="transition-delay:.28s">
-      <div class="text-xs font-semibold text-gray-400 text-right pt-5 leading-tight">Sep<br>2025</div>
-      <div class="tl-dot"></div>
-      <div class="tl-card">
-        <span class="inline-block text-[10px] font-bold tracking-widest uppercase px-2.5 py-1 rounded-full" style="background:#fde8ee;color:#e8154a">Project</span>
-        <h3 class="font-display text-xl mt-2 mb-2" style="color:#1a1a2e">Published My First Photography Zine</h3>
-        <p class="text-sm text-gray-400 leading-relaxed">A limited print run of 200 copies with 40 pages of street and travel photography. Sold out in 48 hours!</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- Newsletter box -->
-  <div class="max-w-3xl mx-auto px-10 mt-12 reveal">
-    <div class="rounded-2xl p-10 text-center text-white" style="background:#1a1a2e">
-      <h3 class="font-display text-3xl mb-2">Get updates in your inbox</h3>
-      <p class="text-white/60 mb-6 text-[15px]">Join the Sunday letter — personal stories, links I love, and life behind the lens.</p>
-      <div class="flex gap-3 max-w-sm mx-auto" id="newsletterForm">
-        <input type="email" id="newsletterEmail" placeholder="your@email.com"
-               class="flex-1 px-5 py-3 rounded-full text-sm font-body text-dark outline-none border-none"/>
-        <button onclick="subscribeNewsletter()"
-                class="px-5 py-3 rounded-full text-sm font-semibold text-white flex-shrink-0 transition-all duration-200"
-                style="background:#e8154a"
-                onmouseover="this.style.background='#c5103d'"
-                onmouseout="this.style.background='#e8154a'">
-          Subscribe
-        </button>
-      </div>
-      <p id="newsletterMsg" class="text-green-400 text-sm mt-3 hidden"></p>
-    </div>
-  </div>
-</section>
-
-
-<!-- =============================================
-  SECTION 6 — CONTACT
-  ============================================= -->
-<section id="contact" style="padding-top:calc(var(--nav-h) + 60px); padding-bottom:80px; background:#f7f9fc;">
-  <div class="max-w-5xl mx-auto px-10 text-center mb-12 reveal">
-    <p class="text-[11px] font-bold tracking-[2px] uppercase mb-3" style="color:#e8154a">Say Hello</p>
-    <h2 class="font-display text-4xl md:text-5xl mb-4">Let's <span style="color:#e8154a">Talk</span></h2>
-    <p class="text-gray-500 text-base max-w-md mx-auto">Whether it's a collaboration, a question, or just a hello — I'd love to hear from you.</p>
-  </div>
-
-  <div class="max-w-5xl mx-auto px-10 grid grid-cols-1 md:grid-cols-3 gap-12 items-start">
-
-    <!-- Contact info -->
-    <div class="reveal">
-      <h3 class="font-display text-xl mb-7" style="color:#1a1a2e">Find me here</h3>
-
-      <div class="flex items-start gap-4 mb-6">
-        <div class="w-11 h-11 bg-white rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="color:#e8154a;box-shadow:0 2px 12px rgba(26,26,46,.07)"><i class="fa-solid fa-envelope"></i></div>
-        <div><span class="block text-[10px] font-bold tracking-widest uppercase text-gray-400 mb-0.5">Email</span><a href="mailto:hello@jameskamerun.com" class="text-sm text-dark hover:text-accent transition-colors">hello@jameskamerun.com</a></div>
-      </div>
-      <div class="flex items-start gap-4 mb-6">
-        <div class="w-11 h-11 bg-white rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="color:#e8154a;box-shadow:0 2px 12px rgba(26,26,46,.07)"><i class="fa-brands fa-instagram"></i></div>
-        <div><span class="block text-[10px] font-bold tracking-widest uppercase text-gray-400 mb-0.5">Instagram</span><a href="#" class="text-sm text-dark hover:text-accent transition-colors">@jameskamerun</a></div>
-      </div>
-      <div class="flex items-start gap-4 mb-6">
-        <div class="w-11 h-11 bg-white rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="color:#e8154a;box-shadow:0 2px 12px rgba(26,26,46,.07)"><i class="fa-brands fa-x-twitter"></i></div>
-        <div><span class="block text-[10px] font-bold tracking-widest uppercase text-gray-400 mb-0.5">Twitter / X</span><a href="#" class="text-sm text-dark hover:text-accent transition-colors">@jameskamerun</a></div>
-      </div>
-      <div class="flex items-start gap-4 mb-8">
-        <div class="w-11 h-11 bg-white rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="color:#e8154a;box-shadow:0 2px 12px rgba(26,26,46,.07)"><i class="fa-brands fa-linkedin-in"></i></div>
-        <div><span class="block text-[10px] font-bold tracking-widest uppercase text-gray-400 mb-0.5">LinkedIn</span><a href="#" class="text-sm text-dark hover:text-accent transition-colors">James Kamerun</a></div>
-      </div>
-
-      <div class="flex items-center gap-3 text-sm text-gray-400">
-        <span class="avail-dot"></span>
-        Available for collaborations
-      </div>
-    </div>
-
-    <!-- Contact Form -->
-    <div class="md:col-span-2 bg-white rounded-2xl p-8 reveal" style="transition-delay:.15s;box-shadow:0 8px 32px rgba(26,26,46,.08)" id="contact-form">
-      <div id="formSuccess" class="hidden mb-5 p-4 rounded-xl flex items-center gap-3 text-sm font-medium" style="background:#d4f7e7;color:#0d7a3f">
-        <i class="fa-solid fa-circle-check text-lg"></i>
-        <span id="successMsg"></span>
-      </div>
-
-      <form id="contactForm" onsubmit="submitContactForm(event)" novalidate>
-        <div class="grid grid-cols-2 gap-5 mb-5">
-          <div class="flex flex-col gap-2">
-            <label class="text-sm font-semibold" for="name">Your Name</label>
-            <input type="text" id="name" name="name" placeholder="James Smith" class="contact-input" required/>
-          </div>
-          <div class="flex flex-col gap-2">
-            <label class="text-sm font-semibold" for="email">Email Address</label>
-            <input type="email" id="email" name="email" placeholder="you@example.com" class="contact-input" required/>
+    <!-- ========== ABOUT ========== -->
+    <section class="section about-section" id="about">
+      <div class="section-inner">
+        <div class="about-image-col">
+          <div class="about-img-wrap">
+            <div class="brush-stroke brush-stroke--sm"></div>
+            <img src="images/profile.png" alt="James Kamerun" class="about-photo"/>
           </div>
         </div>
-        <div class="flex flex-col gap-2 mb-5">
-          <label class="text-sm font-semibold" for="subject">Subject</label>
-          <input type="text" id="subject" name="subject" placeholder="What's this about?" class="contact-input" required/>
+        <div class="about-content-col">
+          <p class="section-tag">About Me</p>
+          <h2 class="section-title">A little bit about <span class="accent">myself</span></h2>
+          <p class="about-bio">
+            Hey! I'm James, a creative individual with a passion for storytelling,
+            photography, and building things online. Based in the world, always exploring.
+            I believe in living intentionally and sharing authentic moments.
+          </p>
+          <p class="about-bio">
+            When I'm not writing or shooting photos, you'll find me hiking trails,
+            experimenting in the kitchen, or deep in a good book. This website is where
+            I document the journey.
+          </p>
+          <div class="about-facts">
+            <div class="fact-item">
+              <span class="fact-number">12+</span>
+              <span class="fact-label">Years of journaling</span>
+            </div>
+            <div class="fact-item">
+              <span class="fact-number">340</span>
+              <span class="fact-label">Blog posts written</span>
+            </div>
+            <div class="fact-item">
+              <span class="fact-number">28</span>
+              <span class="fact-label">Countries visited</span>
+            </div>
+          </div>
+          <a href="#contact" class="btn-primary scroll-link">Get In Touch</a>
         </div>
-        <div class="flex flex-col gap-2 mb-6">
-          <label class="text-sm font-semibold" for="message">Message</label>
-          <textarea id="message" name="message" rows="5" placeholder="Hi James, I wanted to reach out about..." class="contact-input" required></textarea>
+      </div>
+    </section>
+
+    <!-- ========== GALLERY ========== -->
+    <section class="section gallery-section" id="gallery">
+      <div class="section-header">
+        <p class="section-tag">Visual Stories</p>
+        <h2 class="section-title">My <span class="accent">Gallery</span></h2>
+        <p class="section-subtitle">A curated collection of moments captured through my lens.</p>
+      </div>
+
+      <div class="gallery-filters">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="travel">Travel</button>
+        <button class="filter-btn" data-filter="nature">Nature</button>
+        <button class="filter-btn" data-filter="portrait">Portrait</button>
+        <button class="filter-btn" data-filter="urban">Urban</button>
+      </div>
+
+      <div class="gallery-grid" id="galleryGrid">
+        <div class="gallery-item" data-category="travel">
+          <div class="gallery-placeholder" style="background:linear-gradient(135deg,#e8d5c4,#c9a98d)">
+            <i class="fa-solid fa-mountain-sun"></i><span>Mountain Trails</span>
+          </div>
+          <div class="gallery-overlay"><p>Mountain Trails</p><span>Travel</span></div>
         </div>
-        <button type="submit"
-                class="w-full flex items-center justify-center gap-2 px-7 py-4 rounded-full text-sm font-semibold text-white transition-all duration-200"
-                style="background:#1a1a2e"
-                onmouseover="this.style.background='#e8154a';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(232,21,74,.3)'"
-                onmouseout="this.style.background='#1a1a2e';this.style.transform='';this.style.boxShadow=''">
-          Send Message <i class="fa-solid fa-paper-plane text-xs"></i>
-        </button>
-      </form>
+        <div class="gallery-item gallery-item--tall" data-category="portrait">
+          <div class="gallery-placeholder" style="background:linear-gradient(135deg,#c4d8e8,#8dafc9)">
+            <i class="fa-solid fa-user"></i><span>Golden Hour</span>
+          </div>
+          <div class="gallery-overlay"><p>Golden Hour</p><span>Portrait</span></div>
+        </div>
+        <div class="gallery-item" data-category="urban">
+          <div class="gallery-placeholder" style="background:linear-gradient(135deg,#d4e8c4,#9dc98d)">
+            <i class="fa-solid fa-city"></i><span>City Lights</span>
+          </div>
+          <div class="gallery-overlay"><p>City Lights</p><span>Urban</span></div>
+        </div>
+        <div class="gallery-item gallery-item--wide" data-category="nature">
+          <div class="gallery-placeholder" style="background:linear-gradient(135deg,#e8c4d8,#c98db8)">
+            <i class="fa-solid fa-leaf"></i><span>Morning Mist</span>
+          </div>
+          <div class="gallery-overlay"><p>Morning Mist</p><span>Nature</span></div>
+        </div>
+        <div class="gallery-item" data-category="travel">
+          <div class="gallery-placeholder" style="background:linear-gradient(135deg,#e8e4c4,#c9c38d)">
+            <i class="fa-solid fa-plane"></i><span>Coastal Roads</span>
+          </div>
+          <div class="gallery-overlay"><p>Coastal Roads</p><span>Travel</span></div>
+        </div>
+        <div class="gallery-item" data-category="nature">
+          <div class="gallery-placeholder" style="background:linear-gradient(135deg,#c4e8e4,#8dc9c3)">
+            <i class="fa-solid fa-water"></i><span>Still Waters</span>
+          </div>
+          <div class="gallery-overlay"><p>Still Waters</p><span>Nature</span></div>
+        </div>
+        <div class="gallery-item" data-category="urban">
+          <div class="gallery-placeholder" style="background:linear-gradient(135deg,#d8c4e8,#b38dc9)">
+            <i class="fa-solid fa-building"></i><span>Street Art</span>
+          </div>
+          <div class="gallery-overlay"><p>Street Art</p><span>Urban</span></div>
+        </div>
+        <div class="gallery-item" data-category="portrait">
+          <div class="gallery-placeholder" style="background:linear-gradient(135deg,#e8c4c4,#c98d8d)">
+            <i class="fa-solid fa-face-smile"></i><span>Candid Moments</span>
+          </div>
+          <div class="gallery-overlay"><p>Candid Moments</p><span>Portrait</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== MY BLOG ========== -->
+    <section class="section blog-section" id="blog">
+      <div class="section-header">
+        <p class="section-tag">Written Words</p>
+        <h2 class="section-title">My <span class="accent">Blog</span></h2>
+        <p class="section-subtitle">Thoughts, reflections, and stories from everyday life.</p>
+      </div>
+
+      <div class="blog-grid">
+        <article class="blog-card blog-card--featured">
+          <div class="blog-card__thumb" style="background:linear-gradient(135deg,#f5e6d3,#e8c9a0)">
+            <i class="fa-solid fa-pen-nib"></i>
+          </div>
+          <div class="blog-card__body">
+            <span class="blog-tag">Life</span>
+            <h3 class="blog-card__title">The Art of Slowing Down in a Fast World</h3>
+            <p class="blog-card__excerpt">We live in an age that glorifies busyness. But what happens when we dare to pause and simply breathe? This is what I learned from a month offline...</p>
+            <div class="blog-card__meta">
+              <span><i class="fa-regular fa-calendar"></i> Feb 15, 2026</span>
+              <span><i class="fa-regular fa-clock"></i> 6 min read</span>
+            </div>
+            <a href="#" class="blog-read-more">Read more <i class="fa-solid fa-arrow-right"></i></a>
+          </div>
+        </article>
+
+        <article class="blog-card">
+          <div class="blog-card__thumb" style="background:linear-gradient(135deg,#d3e6f5,#a0c9e8)">
+            <i class="fa-solid fa-camera"></i>
+          </div>
+          <div class="blog-card__body">
+            <span class="blog-tag">Photography</span>
+            <h3 class="blog-card__title">What My Camera Taught Me About Patience</h3>
+            <p class="blog-card__excerpt">Great shots rarely happen instantly. They're earned through waiting, watching, and learning to see the world differently...</p>
+            <div class="blog-card__meta">
+              <span><i class="fa-regular fa-calendar"></i> Jan 30, 2026</span>
+              <span><i class="fa-regular fa-clock"></i> 4 min read</span>
+            </div>
+            <a href="#" class="blog-read-more">Read more <i class="fa-solid fa-arrow-right"></i></a>
+          </div>
+        </article>
+
+        <article class="blog-card">
+          <div class="blog-card__thumb" style="background:linear-gradient(135deg,#e6f5d3,#c9e8a0)">
+            <i class="fa-solid fa-map-location-dot"></i>
+          </div>
+          <div class="blog-card__body">
+            <span class="blog-tag">Travel</span>
+            <h3 class="blog-card__title">Hidden Gems: Towns You'll Never Find on Lists</h3>
+            <p class="blog-card__excerpt">Every traveler dreams of discovering places untouched by tourism. Here are five of my most cherished, off-the-radar destinations...</p>
+            <div class="blog-card__meta">
+              <span><i class="fa-regular fa-calendar"></i> Jan 10, 2026</span>
+              <span><i class="fa-regular fa-clock"></i> 8 min read</span>
+            </div>
+            <a href="#" class="blog-read-more">Read more <i class="fa-solid fa-arrow-right"></i></a>
+          </div>
+        </article>
+
+        <article class="blog-card">
+          <div class="blog-card__thumb" style="background:linear-gradient(135deg,#f5d3e6,#e8a0c9)">
+            <i class="fa-solid fa-book-open"></i>
+          </div>
+          <div class="blog-card__body">
+            <span class="blog-tag">Reflection</span>
+            <h3 class="blog-card__title">Books That Changed the Way I See People</h3>
+            <p class="blog-card__excerpt">A short list of reads that expanded my empathy, challenged my assumptions, and made me a better listener...</p>
+            <div class="blog-card__meta">
+              <span><i class="fa-regular fa-calendar"></i> Dec 22, 2025</span>
+              <span><i class="fa-regular fa-clock"></i> 5 min read</span>
+            </div>
+            <a href="#" class="blog-read-more">Read more <i class="fa-solid fa-arrow-right"></i></a>
+          </div>
+        </article>
+
+        <article class="blog-card">
+          <div class="blog-card__thumb" style="background:linear-gradient(135deg,#d3d3f5,#a0a0e8)">
+            <i class="fa-solid fa-mug-hot"></i>
+          </div>
+          <div class="blog-card__body">
+            <span class="blog-tag">Daily Life</span>
+            <h3 class="blog-card__title">My Morning Ritual and Why It's Sacred</h3>
+            <p class="blog-card__excerpt">Before the world wakes up, I have one quiet hour that sets the tone for everything. Here's exactly what I do in that window...</p>
+            <div class="blog-card__meta">
+              <span><i class="fa-regular fa-calendar"></i> Dec 5, 2025</span>
+              <span><i class="fa-regular fa-clock"></i> 3 min read</span>
+            </div>
+            <a href="#" class="blog-read-more">Read more <i class="fa-solid fa-arrow-right"></i></a>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ========== UPDATES ========== -->
+    <section class="section updates-section" id="updates">
+      <div class="section-header">
+        <p class="section-tag">What's New</p>
+        <h2 class="section-title"><span class="accent">Updates</span></h2>
+        <p class="section-subtitle">A living log of what I'm up to — new projects, milestones, and life moments.</p>
+      </div>
+
+      <div class="timeline">
+        <div class="timeline-item reveal">
+          <div class="timeline-date">March 2026</div>
+          <div class="timeline-dot"></div>
+          <div class="timeline-card">
+            <span class="update-badge update-badge--new">New</span>
+            <h3>Launched My Personal Website 🎉</h3>
+            <p>After months of planning and designing, my personal corner of the web is finally live. Excited to share my journey, photography, and writing here!</p>
+          </div>
+        </div>
+        <div class="timeline-item reveal">
+          <div class="timeline-date">February 2026</div>
+          <div class="timeline-dot"></div>
+          <div class="timeline-card">
+            <span class="update-badge update-badge--travel">Travel</span>
+            <h3>Back from a 3-Week Solo Trip Through Southeast Asia</h3>
+            <p>Visited Vietnam, Cambodia, and Thailand. Shot over 2,000 photos. Full travel diary coming soon to the blog. My soul feels refreshed.</p>
+          </div>
+        </div>
+        <div class="timeline-item reveal">
+          <div class="timeline-date">January 2026</div>
+          <div class="timeline-dot"></div>
+          <div class="timeline-card">
+            <span class="update-badge update-badge--project">Project</span>
+            <h3>Started a 365-Day Photography Challenge</h3>
+            <p>One photo every day for a full year. Follow along on my Instagram and in the Gallery section. Day 1 was a foggy sunrise from my balcony.</p>
+          </div>
+        </div>
+        <div class="timeline-item reveal">
+          <div class="timeline-date">December 2025</div>
+          <div class="timeline-dot"></div>
+          <div class="timeline-card">
+            <span class="update-badge update-badge--milestone">Milestone</span>
+            <h3>Hit 10,000 Newsletter Subscribers</h3>
+            <p>My Sunday letter now reaches over 10,000 readers every week. Genuinely overwhelmed by the love and support. Thank you all!</p>
+          </div>
+        </div>
+        <div class="timeline-item reveal">
+          <div class="timeline-date">October 2025</div>
+          <div class="timeline-dot"></div>
+          <div class="timeline-card">
+            <span class="update-badge update-badge--reading">Reading</span>
+            <h3>Currently Reading: "The Comfort of Things"</h3>
+            <p>A fascinating anthropological look at how objects in our homes reflect our inner lives. Highly recommend for anyone who thinks deeply about identity.</p>
+          </div>
+        </div>
+        <div class="timeline-item reveal">
+          <div class="timeline-date">September 2025</div>
+          <div class="timeline-dot"></div>
+          <div class="timeline-card">
+            <span class="update-badge update-badge--project">Project</span>
+            <h3>Published My First Photography Zine</h3>
+            <p>A limited print run of 200 copies featuring 40 pages of street and travel photography from the past two years. Sold out in 48 hours!</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="newsletter-box reveal">
+        <h3>Get updates in your inbox</h3>
+        <p>Join the Sunday letter — personal stories, links I love, and life behind the lens.</p>
+        <div class="newsletter-form" id="newsletterForm">
+          <input type="email" id="newsletterEmail" placeholder="your@email.com" class="newsletter-input"/>
+          <button class="btn-primary" id="newsletterBtn">Subscribe</button>
+        </div>
+        <p class="newsletter-success" id="newsletterSuccess" style="display:none"></p>
+      </div>
+    </section>
+
+    <!-- ========== CONTACT ========== -->
+    <section class="section contact-section" id="contact">
+      <div class="section-header">
+        <p class="section-tag">Say Hello</p>
+        <h2 class="section-title">Let's <span class="accent">Talk</span></h2>
+        <p class="section-subtitle">Whether it's a collaboration, a question, or just a hello — I'd love to hear from you.</p>
+      </div>
+
+      <div class="contact-layout">
+        <div class="contact-info reveal">
+          <h3>Find me here</h3>
+          <div class="contact-detail">
+            <div class="contact-icon"><i class="fa-solid fa-envelope"></i></div>
+            <div>
+              <span class="contact-detail__label">Email</span>
+              <a href="mailto:hello@jameskamerun.com">hello@jameskamerun.com</a>
+            </div>
+          </div>
+          <div class="contact-detail">
+            <div class="contact-icon"><i class="fa-brands fa-instagram"></i></div>
+            <div>
+              <span class="contact-detail__label">Instagram</span>
+              <a href="#">@jameskamerun</a>
+            </div>
+          </div>
+          <div class="contact-detail">
+            <div class="contact-icon"><i class="fa-brands fa-x-twitter"></i></div>
+            <div>
+              <span class="contact-detail__label">Twitter / X</span>
+              <a href="#">@jameskamerun</a>
+            </div>
+          </div>
+          <div class="contact-detail">
+            <div class="contact-icon"><i class="fa-brands fa-linkedin-in"></i></div>
+            <div>
+              <span class="contact-detail__label">LinkedIn</span>
+              <a href="#">James Kamerun</a>
+            </div>
+          </div>
+          <div class="contact-availability">
+            <span class="avail-dot"></span>
+            <span>Available for collaborations &amp; conversations</span>
+          </div>
+        </div>
+
+        <div class="contact-form-wrap reveal" id="contact-form">
+          <div class="form-success" id="formSuccess" style="display:none">
+            <i class="fa-solid fa-circle-check"></i>
+            <p id="formSuccessMsg"></p>
+          </div>
+          <form class="contact-form" id="contactForm" novalidate>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="name">Your Name</label>
+                <input type="text" id="name" name="name" placeholder="James Smith" required/>
+              </div>
+              <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" placeholder="you@example.com" required/>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="subject">Subject</label>
+              <input type="text" id="subject" name="subject" placeholder="What's this about?" required/>
+            </div>
+            <div class="form-group">
+              <label for="message">Message</label>
+              <textarea id="message" name="message" rows="6" placeholder="Hi James, I wanted to reach out about..." required></textarea>
+            </div>
+            <button type="submit" class="btn-primary btn-submit">
+              Send Message <i class="fa-solid fa-paper-plane"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========== FOOTER ========== -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <span class="nav-logo">LOGO</span>
+      <p>© 2026 James Kamerun. All rights reserved.</p>
+      <div class="footer-socials">
+        <a href="#" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+        <a href="#" aria-label="Twitter"><i class="fa-brands fa-x-twitter"></i></a>
+        <a href="#" aria-label="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
+        <a href="#" aria-label="GitHub"><i class="fa-brands fa-github"></i></a>
+      </div>
     </div>
-  </div>
-</section>
+  </footer>
 
-<!-- =============================================
-  FOOTER
-  ============================================= -->
-<footer class="text-center py-8 text-sm text-gray-400" style="background:#1a1a2e;color:rgba(255,255,255,.4)">
-  <p class="font-body">© 2026 James Kamerun. Made with love.</p>
-</footer>
-
-
-<!-- =============================================
-  JAVASCRIPT
-  ============================================= -->
-<script src="js/script.js"></script>
-
+  <script src="js/script.js"></script>
 </body>
 </html>
