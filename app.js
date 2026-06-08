@@ -14,15 +14,6 @@ app.use(express.json());
 
 // ═══════════════════════════════════════════════════════════════
 //  FIREBASE SETUP
-//  ─────────────────────────────────────────────────────────────
-//  Option A (recommended for production): service account JSON
-//    1. Go to Firebase Console → Project Settings → Service Accounts
-//    2. Click "Generate new private key" → save as firebase-service-account.json
-//    3. Put the file in the project root (add it to .gitignore!)
-//
-//  Option B: environment variable (great for hosting platforms)
-//    Set FIREBASE_SERVICE_ACCOUNT env var to the JSON string
-// ═══════════════════════════════════════════════════════════════
 
 let serviceAccount;
 
