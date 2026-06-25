@@ -419,7 +419,7 @@
     }
   </style>
 </head>
-<body>
+<body style="visibility:hidden;">
 
 <!-- Sidebar backdrop (mobile) -->
 <div class="sb-backdrop" id="sbBackdrop" onclick="closeSidebarMobile()"></div>
@@ -793,6 +793,85 @@
       </div>
     </div>
 
+    <!-- ── Edit Newsletter Modal ─────────────────────────────── -->
+    <div id="editNlModal" class="confirm-overlay" style="display:none;" onclick="if(event.target===this)closeEditNlModal()">
+      <div class="confirm-box" style="max-width:640px;width:95%;max-height:90vh;overflow-y:auto;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+          <h3 style="margin:0;font-size:17px;display:flex;align-items:center;gap:10px;">
+            <i class="fa-solid fa-pen" style="color:var(--accent);"></i> Edit Newsletter
+          </h3>
+          <button onclick="closeEditNlModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);padding:4px;">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+        <div class="nl-form">
+          <input type="hidden" id="editNlId">
+          <div class="fg">
+            <label class="fl">Subject <span style="color:var(--accent);">*</span></label>
+            <input type="text" id="editNlSubject" placeholder="Subject line…">
+          </div>
+          <div class="fg">
+            <label class="fl">Preview Text</label>
+            <input type="text" id="editNlPreview" placeholder="Short preview shown in inbox…">
+          </div>
+          <div class="fg">
+            <label class="fl">Heading <span style="color:var(--accent);">*</span></label>
+            <input type="text" id="editNlHeading" placeholder="Main heading inside email…">
+          </div>
+          <div class="fg">
+            <label class="fl">Body <span style="color:var(--accent);">*</span></label>
+            <textarea id="editNlBody" rows="8" placeholder="Email body content…"></textarea>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="fg">
+              <label class="fl">CTA Button Text</label>
+              <input type="text" id="editNlCtaText" placeholder="Read More…">
+            </div>
+            <div class="fg">
+              <label class="fl">CTA Button URL</label>
+              <input type="text" id="editNlCtaUrl" placeholder="https://…">
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px;">
+            <button class="btn btn-outline" onclick="closeEditNlModal()">Cancel</button>
+            <button class="btn" id="saveNlBtn" onclick="saveEditNewsletter()" style="background:var(--accent);color:#fff;">
+              <i class="fa-solid fa-floppy-disk"></i> Save Changes
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Delete Newsletter Confirm ─────────────────────────── -->
+    <div id="deleteNlOverlay" class="confirm-overlay" style="display:none;">
+      <div class="confirm-box" style="max-width:420px;width:95%;text-align:center;">
+        <div style="font-size:40px;margin-bottom:12px;">🗑️</div>
+        <h3 style="margin:0 0 8px;">Delete Newsletter?</h3>
+        <p style="color:var(--muted);font-size:14px;margin-bottom:20px;">This will permanently remove the newsletter record. This action cannot be undone.</p>
+        <div style="display:flex;gap:10px;justify-content:center;">
+          <button class="btn btn-outline" onclick="closeDeleteNlOverlay()">Cancel</button>
+          <button class="btn" id="confirmDeleteNlBtn" style="background:var(--accent);color:#fff;" onclick="doDeleteNewsletter()">
+            <i class="fa-solid fa-trash"></i> Delete
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Resend Newsletter Confirm ─────────────────────────── -->
+    <div id="resendNlOverlay" class="confirm-overlay" style="display:none;">
+      <div class="confirm-box" style="max-width:420px;width:95%;text-align:center;">
+        <div style="font-size:40px;margin-bottom:12px;">📨</div>
+        <h3 style="margin:0 0 8px;">Resend Newsletter?</h3>
+        <p style="color:var(--muted);font-size:14px;margin-bottom:20px;">This will resend the newsletter to <strong>all current subscribers</strong>.</p>
+        <div style="display:flex;gap:10px;justify-content:center;">
+          <button class="btn btn-outline" onclick="closeResendNlOverlay()">Cancel</button>
+          <button class="btn" id="confirmResendNlBtn" style="background:#3b82f6;color:#fff;" onclick="doResendNewsletter()">
+            <i class="fa-solid fa-paper-plane"></i> Resend
+          </button>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /content -->
 
   <footer class="dashboard-footer">
@@ -825,7 +904,11 @@
 <script>
   // ── Auth guard ────────────────────────────────────────────────
   const TOKEN = localStorage.getItem('adminToken');
-  if (!TOKEN) window.location.href = '/admin-login.html';
+  if (!TOKEN) {
+    window.location.href = '/admin-login.html';
+  } else {
+    document.body.style.visibility = 'visible';
+  }
 
   try {
     const payload = JSON.parse(atob(TOKEN.split('.')[1]));
@@ -1198,9 +1281,18 @@
         <td><span class="badge badge-green">${n.sent_count} sent</span></td>
         <td>${escHtml(n.sent_by || 'admin')}</td>
         <td class="date-cell">${fmtDate(n.sent_at)}</td>
-        <td>
-          <button class="btn btn-outline" style="padding:6px 12px;font-size:12px;" onclick="openNlModal('${n.id}')">
-            <i class="fa-solid fa-eye"></i> View
+        <td style="white-space:nowrap;display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn btn-outline" style="padding:5px 10px;font-size:12px;" onclick="openNlModal('${n.id}')" title="View">
+            <i class="fa-solid fa-eye"></i>
+          </button>
+          <button class="btn btn-outline" style="padding:5px 10px;font-size:12px;color:#f59e0b;border-color:#f59e0b;" onclick="openEditNlModal('${n.id}')" title="Edit">
+            <i class="fa-solid fa-pen"></i>
+          </button>
+          <button class="btn btn-outline" style="padding:5px 10px;font-size:12px;color:#3b82f6;border-color:#3b82f6;" onclick="confirmResendNl('${n.id}')" title="Resend">
+            <i class="fa-solid fa-paper-plane"></i>
+          </button>
+          <button class="btn btn-outline" style="padding:5px 10px;font-size:12px;color:var(--accent);border-color:var(--accent);" onclick="confirmDeleteNl('${n.id}')" title="Delete">
+            <i class="fa-solid fa-trash"></i>
           </button>
         </td>
       </tr>`).join('') :
@@ -1243,8 +1335,101 @@
     document.getElementById('nlModal').style.display = 'none';
   }
 
-  // ── Real-time polling every 10 seconds ────────────────────────
-  setInterval(loadData, 10000);
+  // ── Edit Newsletter ───────────────────────────────────────────
+  function openEditNlModal(id) {
+    const n = allNewsletters.find(x => x.id === id);
+    if (!n) return;
+    document.getElementById('editNlId').value      = n.id;
+    document.getElementById('editNlSubject').value = n.subject;
+    document.getElementById('editNlPreview').value = n.preview_text || '';
+    document.getElementById('editNlHeading').value = n.heading;
+    document.getElementById('editNlBody').value    = n.body;
+    document.getElementById('editNlCtaText').value = n.cta_text || '';
+    document.getElementById('editNlCtaUrl').value  = n.cta_url  || '';
+    const m = document.getElementById('editNlModal');
+    m.style.display = 'flex'; m.style.alignItems = 'center'; m.style.justifyContent = 'center';
+  }
+  function closeEditNlModal() {
+    document.getElementById('editNlModal').style.display = 'none';
+  }
+  async function saveEditNewsletter() {
+    const id         = document.getElementById('editNlId').value;
+    const subject    = document.getElementById('editNlSubject').value.trim();
+    const previewText= document.getElementById('editNlPreview').value.trim();
+    const heading    = document.getElementById('editNlHeading').value.trim();
+    const body       = document.getElementById('editNlBody').value.trim();
+    const ctaText    = document.getElementById('editNlCtaText').value.trim();
+    const ctaUrl     = document.getElementById('editNlCtaUrl').value.trim();
+    if (!subject || !heading || !body) return showToast('Subject, heading and body are required.', 'error');
+    const btn = document.getElementById('saveNlBtn');
+    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving…';
+    const data = await api('/admin/newsletters/' + id, 'PUT', { subject, previewText, heading, body, ctaText, ctaUrl });
+    btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Changes';
+    if (data.success) {
+      closeEditNlModal();
+      showToast('Newsletter updated.', 'success');
+      loadNewsletterHistory();
+    } else {
+      showToast('Update failed: ' + (data.error || 'Unknown error'), 'error');
+    }
+  }
+
+  // ── Delete Newsletter ─────────────────────────────────────────
+  let pendingDeleteNlId = null;
+  function confirmDeleteNl(id) {
+    pendingDeleteNlId = id;
+    const m = document.getElementById('deleteNlOverlay');
+    m.style.display = 'flex'; m.style.alignItems = 'center'; m.style.justifyContent = 'center';
+  }
+  function closeDeleteNlOverlay() {
+    document.getElementById('deleteNlOverlay').style.display = 'none';
+    pendingDeleteNlId = null;
+  }
+  async function doDeleteNewsletter() {
+    if (!pendingDeleteNlId) return;
+    const btn = document.getElementById('confirmDeleteNlBtn');
+    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Deleting…';
+    const data = await api('/admin/newsletters/' + pendingDeleteNlId, 'DELETE');
+    btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-trash"></i> Delete';
+    closeDeleteNlOverlay();
+    if (data.success) {
+      allNewsletters = allNewsletters.filter(n => n.id !== pendingDeleteNlId);
+      renderNewsletterHistory();
+      showToast('Newsletter deleted.', 'success');
+    } else {
+      showToast('Delete failed: ' + (data.error || 'Unknown error'), 'error');
+    }
+  }
+
+  // ── Resend Newsletter ─────────────────────────────────────────
+  let pendingResendNlId = null;
+  function confirmResendNl(id) {
+    pendingResendNlId = id;
+    const m = document.getElementById('resendNlOverlay');
+    m.style.display = 'flex'; m.style.alignItems = 'center'; m.style.justifyContent = 'center';
+  }
+  function closeResendNlOverlay() {
+    document.getElementById('resendNlOverlay').style.display = 'none';
+    pendingResendNlId = null;
+  }
+  async function doResendNewsletter() {
+    if (!pendingResendNlId) return;
+    const btn = document.getElementById('confirmResendNlBtn');
+    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending…';
+    const data = await api('/admin/newsletters/' + pendingResendNlId + '/resend', 'POST');
+    btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Resend';
+    closeResendNlOverlay();
+    if (data.success) {
+      showToast('✅ Newsletter resent to ' + data.sent + ' subscribers!', 'success');
+      loadNewsletterHistory();
+    } else {
+      showToast('Resend failed: ' + (data.error || 'Unknown error'), 'error');
+    }
+  }
+
+  // ── Real-time polling every 5 seconds ─────────────────────────
+  setInterval(loadData, 5000);
+  setInterval(loadContacts, 10000);
 
   // ── Init ──────────────────────────────────────────────────────
   loadData();

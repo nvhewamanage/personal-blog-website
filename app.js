@@ -1,16 +1,46 @@
 require('dotenv').config();
-const express    = require('express');
-const nodemailer = require('nodemailer');
-const bcrypt     = require('bcryptjs');
-const jwt        = require('jsonwebtoken');
-const admin      = require('firebase-admin');
+const express      = require('express');
+const nodemailer   = require('nodemailer');
+const bcrypt       = require('bcryptjs');
+const jwt          = require('jsonwebtoken');
+const admin        = require('firebase-admin');
+const rateLimit    = require('express-rate-limit');
+const helmet       = require('helmet');
+const validator    = require('validator');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
+// ─── Security Middleware ───────────────────────────────────────
+
+// Secure HTTP headers (XSS protection, clickjacking, MIME sniffing, etc.)
+app.use(helmet({ contentSecurityPolicy: false }));
+
+// Hide server fingerprint
+app.disable('x-powered-by');
+
+// Rate limiter for public submission endpoints
+const publicLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { success: false, error: 'Too many requests. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Stricter rate limiter for login (brute-force protection)
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { success: false, error: 'Too many login attempts. Please try again in 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // ─── Middleware ────────────────────────────────────────────────
 app.use(express.static('public'));
-app.use(express.json());
+app.use('/images', express.static('images')); // serve root-level images folder
+app.use(express.json({ limit: '10kb' })); // Reject oversized bodies
 
 // ═══════════════════════════════════════════════════════════════
 //  FIREBASE SETUP
@@ -84,18 +114,27 @@ function authMiddleware(req, res, next) {
 // ═══════════════════════════════════════════════════════════════
 
 // ─── Contact Form ─────────────────────────────────────────────
-app.post('/send-message', async (req, res) => {
+app.post('/send-message', publicLimiter, async (req, res) => {
   const { name, email, subject, message } = req.body;
   if (!name || !email || !subject || !message)
     return res.status(400).json({ success: false, error: 'All fields are required.' });
 
+  // Validate and sanitize inputs
+  if (!validator.isEmail(String(email)))
+    return res.status(400).json({ success: false, error: 'Invalid email address.' });
+  if (String(name).length > 100 || String(subject).length > 200 || String(message).length > 5000)
+    return res.status(400).json({ success: false, error: 'Input exceeds allowed length.' });
+  const safeName    = validator.escape(String(name).trim());
+  const safeSubject = validator.escape(String(subject).trim());
+  const safeMessage = validator.escape(String(message).trim());
+
   try {
     // Save contact message to Firestore
     await db.collection('contacts').add({
-      name,
-      email,
-      subject,
-      message,
+      name:    safeName,
+      email:   validator.normalizeEmail(String(email)) || String(email).toLowerCase().trim(),
+      subject: safeSubject,
+      message: safeMessage,
       read: false,
       received_at: admin.firestore.FieldValue.serverTimestamp(),
     });
@@ -168,9 +207,9 @@ app.delete('/admin/contacts/:id', authMiddleware, async (req, res) => {
 });
 
 // ─── Subscribe ────────────────────────────────────────────────
-app.post('/subscribe', async (req, res) => {
+app.post('/subscribe', publicLimiter, async (req, res) => {
   const { email } = req.body;
-  if (!email || !email.includes('@'))
+  if (!email || !validator.isEmail(String(email)))
     return res.status(400).json({ success: false, error: 'Valid email required.' });
 
   const normalizedEmail = email.toLowerCase().trim();
@@ -225,14 +264,17 @@ app.post('/subscribe', async (req, res) => {
 //  ADMIN AUTH ROUTES
 // ═══════════════════════════════════════════════════════════════
 
-app.post('/admin/login', async (req, res) => {
+app.post('/admin/login', loginLimiter, async (req, res) => {
   const { username, password } = req.body;
-  if (!username || !password)
+  if (!username || !password ||
+      typeof username !== 'string' || typeof password !== 'string' ||
+      username.length > 64 || password.length > 128)
     return res.status(400).json({ success: false, error: 'Username and password required.' });
+  const safeUsername = validator.escape(username.trim());
 
   try {
     const snapshot = await db.collection('admins')
-      .where('username', '==', username)
+      .where('username', '==', safeUsername)
       .limit(1)
       .get();
 
@@ -360,6 +402,89 @@ app.get('/admin/newsletters', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('Get newsletters error:', err.message);
     res.status(500).json({ success: false, error: 'Failed to fetch newsletter history.' });
+  }
+});
+
+// ─── Edit Newsletter (admin) ───────────────────────────────────
+app.put('/admin/newsletters/:id', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const { subject, previewText, heading, body, ctaText, ctaUrl } = req.body;
+  if (!subject || !heading || !body)
+    return res.status(400).json({ success: false, error: 'subject, heading, and body are required.' });
+  try {
+    await db.collection('newsletters').doc(id).update({
+      subject,
+      preview_text: previewText || '',
+      heading,
+      body,
+      cta_text:     ctaText    || '',
+      cta_url:      ctaUrl     || '',
+      updated_at:   admin.firestore.FieldValue.serverTimestamp(),
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Edit newsletter error:', err.message);
+    res.status(500).json({ success: false, error: 'Failed to update newsletter.' });
+  }
+});
+
+// ─── Delete Newsletter (admin) ─────────────────────────────────
+app.delete('/admin/newsletters/:id', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  try {
+    await db.collection('newsletters').doc(id).delete();
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Delete newsletter error:', err.message);
+    res.status(500).json({ success: false, error: 'Failed to delete newsletter.' });
+  }
+});
+
+// ─── Resend Newsletter (admin) ─────────────────────────────────
+app.post('/admin/newsletters/:id/resend', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const doc = await db.collection('newsletters').doc(id).get();
+    if (!doc.exists)
+      return res.status(404).json({ success: false, error: 'Newsletter not found.' });
+    const n = doc.data();
+
+    const snapshot = await db.collection('subscribers').get();
+    if (snapshot.empty)
+      return res.json({ success: false, error: 'No subscribers yet.' });
+
+    const emails = snapshot.docs.map(d => d.data().email);
+    const html   = buildNewsletterHTML({
+      subject:     n.subject,
+      previewText: n.preview_text,
+      heading:     n.heading,
+      body:        n.body,
+      ctaText:     n.cta_text,
+      ctaUrl:      n.cta_url,
+    });
+
+    const BATCH = 50;
+    let sent = 0;
+    for (let i = 0; i < emails.length; i += BATCH) {
+      await transporter.sendMail({
+        from:    `"Chanuka Nimsara" <${process.env.GMAIL_USER}>`,
+        bcc:     emails.slice(i, i + BATCH),
+        subject: n.subject,
+        html,
+      });
+      sent += BATCH < emails.length - i ? BATCH : emails.length - i;
+    }
+
+    // Update the resend count and timestamp on the record
+    await db.collection('newsletters').doc(id).update({
+      sent_count:  admin.firestore.FieldValue.increment(sent),
+      last_resent: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    res.json({ success: true, sent });
+  } catch (err) {
+    console.error('Resend newsletter error:', err.message);
+    res.status(500).json({ success: false, error: 'Newsletter resend failed.' });
   }
 });
 

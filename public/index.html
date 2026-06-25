@@ -113,46 +113,7 @@
       color: var(--text);
     }
 
-    /* ============================================================
-       SYSTEM DARK MODE (prefers-color-scheme)
-       Applies when system is dark AND user hasn't forced light mode
-       ============================================================ */
-    @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) {
-        --bg:       #0f1117;
-        --bg-alt:   #1a1d27;
-        --white:    #1e2130;
-        --text:     #e8eaf0;
-        --muted:    #9ca3af;
-        --accent:   #e8154a;
-        --accent-l: #3a0d1a;
-        --dark:     #e8eaf0;
-        --border:   #2e3347;
-        --shadow:   0 8px 32px rgba(0,0,0,.35);
-      }
-      :root:not([data-theme="light"]) #navbar         { background: rgba(15,17,23,.92); }
-      :root:not([data-theme="light"]) #navbar.scrolled { background: rgba(20,23,33,.97); }
-      :root:not([data-theme="light"]) .nav-links       { background: rgba(20,23,33,.97); }
-      :root:not([data-theme="light"]) .nav-links a     { color: rgba(232,234,240,.70); }
-      :root:not([data-theme="light"]) .nav-links a:hover,
-      :root:not([data-theme="light"]) .nav-links a.active { color: #e8eaf0; background: rgba(232,234,240,.12); }
-      :root:not([data-theme="light"]) .fg input,
-      :root:not([data-theme="light"]) .fg textarea     { background: #252836; border-color: #2e3347; color: var(--text); }
-      :root:not([data-theme="light"]) .fg input:focus,
-      :root:not([data-theme="light"]) .fg textarea:focus { border-color: var(--accent); }
-      :root:not([data-theme="light"]) .cf-wrap         { background: #1a1d27; }
-      :root:not([data-theme="light"]) footer            { background: #080a0f; }
-      :root:not([data-theme="light"]) .nl-input         { background: #252836; color: var(--text); }
-      :root:not([data-theme="light"]) .tl-dot           { border-color: var(--bg); }
-      :root:not([data-theme="light"]) .theme-toggle     { background: #252836; border-color: #2e3347; color: #e8eaf0; }
-      :root:not([data-theme="light"]) .sw-pill          { background: #252836; color: var(--text); }
-      :root:not([data-theme="light"]) .gf               { background: #1e2130; color: var(--muted); }
-      :root:not([data-theme="light"]) .gf.active        { background: var(--text); color: var(--bg); }
-      :root:not([data-theme="light"]) .g-modal,
-      :root:not([data-theme="light"]) .blog-modal       { background: #1e2130; }
-      :root:not([data-theme="light"]) .blog-modal-body h2,
-      :root:not([data-theme="light"]) .g-modal-body h3  { color: var(--text); }
-    }
+
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
@@ -1316,17 +1277,8 @@ If you want to become kinder and more connected, start with the books that chall
 
 <!-- ═══════════════ JAVASCRIPT ═══════════════ -->
 <script>
-  /* ── THEME: auto-follows device system preference ───────────── */
-  (function () {
-    function applySystem() {
-      document.documentElement.setAttribute(
-        'data-theme',
-        window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-      );
-    }
-    applySystem();
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applySystem);
-  })();
+  /* ── THEME: fixed light (no system auto-change) ───────────── */
+  document.documentElement.setAttribute('data-theme', 'light');
 
   /* Navbar scroll + active link */
   const navbar   = document.getElementById('navbar');
