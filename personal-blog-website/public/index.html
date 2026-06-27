@@ -1,0 +1,1699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chanuka Nimsara — Personal Website</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+
+  <style>
+    /* ============================================================
+       VARIABLES & RESET
+       ============================================================ */
+    :root {
+      --bg:       #eef1f5;
+      --bg-alt:   #f7f9fc;
+      --white:    #ffffff;
+      --text:     #1a1a2e;
+      --muted:    #6b7280;
+      --accent:   #e8154a;
+      --accent-l: #fde8ee;
+      --dark:     #1a1a2e;
+      --border:   #e5e7eb;
+      --nav-h:    74px;
+      --shadow:   0 8px 32px rgba(26,26,46,.09);
+      --r:        16px;
+      --fd:       'DM Serif Display', serif;
+      --fb:       'Outfit', sans-serif;
+      --ease:     0.35s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* ============================================================
+       DARK MODE VARIABLES  ← THIS WAS MISSING
+       ============================================================ */
+    [data-theme="dark"] {
+      --bg:       #0f1117;
+      --bg-alt:   #1a1d27;
+      --white:    #1e2130;
+      --text:     #e8eaf0;
+      --muted:    #9ca3af;
+      --accent:   #e8154a;
+      --accent-l: #3a0d1a;
+      --dark:     #e8eaf0;
+      --border:   #2e3347;
+      --shadow:   0 8px 32px rgba(0,0,0,.35);
+    }
+
+    /* Specific dark overrides for elements that use hard-coded colours */
+    [data-theme="dark"] #navbar {
+      background: rgba(15,17,23,.92);
+    }
+    [data-theme="dark"] #navbar.scrolled {
+      background: rgba(20,23,33,.97);
+    }
+    [data-theme="dark"] .nav-links {
+      background: rgba(20,23,33,.97);
+    }
+    [data-theme="dark"] .nav-links a {
+      color: rgba(232,234,240,.70);
+    }
+    [data-theme="dark"] .nav-links a:hover,
+    [data-theme="dark"] .nav-links a.active {
+      color: #e8eaf0;
+      background: rgba(232,234,240,.12);
+    }
+    [data-theme="dark"] .fg input,
+    [data-theme="dark"] .fg textarea {
+      background: #252836;
+      border-color: #2e3347;
+      color: var(--text);
+    }
+    [data-theme="dark"] .fg input:focus,
+    [data-theme="dark"] .fg textarea:focus {
+      border-color: var(--accent);
+    }
+    [data-theme="dark"] .cf-wrap {
+      background: #1a1d27;
+    }
+    [data-theme="dark"] footer {
+      background: #080a0f;
+    }
+    [data-theme="dark"] .nl-input {
+      background: #252836;
+      color: var(--text);
+    }
+    [data-theme="dark"] .tl-dot {
+      border-color: var(--bg);
+    }
+    [data-theme="dark"] .theme-toggle {
+      background: #252836;
+      border-color: #2e3347;
+      color: #e8eaf0;
+    }
+    [data-theme="dark"] .sw-pill {
+      background: #252836;
+      color: var(--text);
+    }
+    [data-theme="dark"] .gf {
+      background: #1e2130;
+      color: var(--muted);
+    }
+    [data-theme="dark"] .gf.active {
+      background: var(--text);
+      color: var(--bg);
+    }
+    [data-theme="dark"] .g-modal,
+    [data-theme="dark"] .blog-modal {
+      background: #1e2130;
+    }
+    [data-theme="dark"] .blog-modal-body h2,
+    [data-theme="dark"] .g-modal-body h3 {
+      color: var(--text);
+    }
+
+
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--fb);
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+    a { text-decoration: none; color: inherit; }
+    ul { list-style: none; }
+    img { max-width: 100%; display: block; }
+
+    /* ============================================================
+       NAVBAR
+       ============================================================ */
+    #navbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 1000;
+      height: var(--nav-h);
+      background: rgba(238,241,245,.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      transition: background var(--ease), box-shadow var(--ease);
+    }
+    #navbar.scrolled {
+      background: rgba(255,255,255,.96);
+      box-shadow: 0 2px 20px rgba(26,26,46,.08);
+    }
+    .nav-wrap {
+      max-width: 1344px;
+      margin: 0 auto;
+      height: 100%;
+      padding: 0 48px;
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+    .nav-logo {
+      font-family: var(--fd);
+      font-size: 25px;
+      letter-spacing: 2px;
+      color: var(--dark);
+      flex-shrink: 0;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      margin-left: auto;
+    }
+    .nav-links a {
+      font-size: 12.5px;
+      font-weight: 500;
+      letter-spacing: .6px;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 7px 14px;
+      border-radius: 7px;
+      transition: color var(--ease), background var(--ease);
+    }
+    .nav-links a:hover,
+    .nav-links a.active { color: var(--bg); background: var(--dark); }
+    #hamburger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      margin-left: auto;
+      padding: 4px;
+    }
+    #hamburger span {
+      display: block;
+      width: 24px; height: 2.5px;
+      background: var(--dark);
+      border-radius: 2px;
+      transition: transform var(--ease), opacity var(--ease), background var(--ease);
+    }
+
+    /* ============================================================
+       SHARED
+       ============================================================ */
+    section {
+      padding: calc(var(--nav-h) + 70px) 80px 90px;
+      max-width: 1344px;
+      margin: 0 auto;
+    }
+    .tag {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+    .sec-title {
+      font-family: var(--fd);
+      font-size: clamp(32px, 4.5vw, 52px);
+      font-weight: 400;
+      line-height: 1.2;
+      color: var(--dark);
+      margin-bottom: 16px;
+    }
+    .sec-title .a { color: var(--accent); }
+    .sec-sub {
+      font-size: 15.5px;
+      color: var(--muted);
+      line-height: 1.75;
+      max-width: 520px;
+    }
+    .center { text-align: center; }
+    .center .sec-sub { margin: 0 auto; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 13px 30px;
+      background: var(--dark);
+      color: var(--bg);
+      font-family: var(--fb);
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 50px;
+      border: none;
+      cursor: pointer;
+      transition: background var(--ease), transform var(--ease), box-shadow var(--ease);
+    }
+    .btn:hover {
+      background: var(--accent);
+      color: #fff;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(232,21,74,.28);
+    }
+
+    /* scroll-reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(26px);
+      transition: opacity .55s ease, transform .55s ease;
+    }
+    .reveal.visible { opacity: 1; transform: none; }
+
+    /* ============================================================
+       1. HOME
+       ============================================================ */
+    #home {
+      display: flex;
+      align-items: center;
+      gap: 60px;
+      min-height: 100vh;
+    }
+    .hero-content { flex: 1; max-width: 560px; }
+    .hero-greeting {
+      font-size: 16px;
+      color: var(--muted);
+      margin-bottom: 14px;
+      animation: fadeUp .7s .1s ease both;
+    }
+    .hero-title {
+      font-family: var(--fd);
+      font-size: clamp(42px, 5vw, 64px);
+      font-weight: 400;
+      line-height: 1.15;
+      color: var(--dark);
+      margin-bottom: 22px;
+      animation: fadeUp .7s .2s ease both;
+    }
+    .hero-title .a { color: var(--accent); }
+    .hero-desc {
+      font-size: 15px;
+      line-height: 1.8;
+      color: var(--muted);
+      max-width: 400px;
+      margin-bottom: 38px;
+      animation: fadeUp .7s .3s ease both;
+    }
+    .social-widget {
+      display: inline-block;
+      background: var(--white);
+      border-radius: var(--r);
+      padding: 20px 24px;
+      box-shadow: var(--shadow);
+      animation: fadeUp .7s .4s ease both;
+    }
+    .sw-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+    .sw-links { display: flex; gap: 10px; flex-wrap: wrap; }
+    .sw-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 16px;
+      background: var(--bg);
+      border-radius: 50px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      border: 1.5px solid transparent;
+      transition: all var(--ease);
+    }
+    .sw-pill:hover {
+      background: var(--accent-l);
+      color: var(--accent);
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+    .sw-pill i { font-size: 15px; }
+    .hero-img-wrap {
+      flex: 1;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      min-height: 500px;
+      animation: fadeIn 1s .3s ease both;
+    }
+    .brush {
+      position: absolute;
+      bottom: 0; right: 0;
+      width: 88%; height: 80%;
+      background: linear-gradient(135deg, rgba(200,210,220,.35), rgba(180,195,210,.15));
+      border-radius: 60% 40% 60% 40% / 40% 60% 40% 60%;
+      transform: rotate(-8deg);
+      z-index: 0;
+    }
+    .hero-photo {
+      position: relative;
+      z-index: 1;
+      max-height: 500px;
+      width: auto;
+      object-fit: contain;
+      filter: drop-shadow(0 20px 40px rgba(26,26,46,.13));
+    }
+    .scroll-hint {
+      position: absolute;
+      bottom: -40px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: var(--muted);
+      font-size: 14px;
+      cursor: pointer;
+      animation: bounce 2s infinite;
+    }
+    @keyframes bounce {
+      0%,100% { transform: translateX(-50%) translateY(0); }
+      50%      { transform: translateX(-50%) translateY(8px); }
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: none; }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; } to { opacity: 1; }
+    }
+
+    /* ============================================================
+       2. ABOUT
+       ============================================================ */
+    #about {
+      background: var(--white);
+      display: flex;
+      align-items: center;
+      gap: 72px;
+    }
+    .about-img-col { flex: 0 0 42%; }
+    .about-img-wrap {
+      position: relative;
+      height: 500px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+    }
+    .about-brush {
+      position: absolute;
+      bottom: 0; right: 0;
+      width: 90%; height: 85%;
+      background: linear-gradient(135deg, rgba(232,21,74,.08), rgba(200,210,220,.25));
+      border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+      transform: rotate(-5deg);
+    }
+    .about-photo {
+      position: relative;
+      z-index: 1;
+      max-height: 460px;
+      object-fit: contain;
+      filter: drop-shadow(0 16px 32px rgba(26,26,46,.1));
+    }
+    .about-col { flex: 1; }
+    .about-bio { font-size: 15px; line-height: 1.85; color: var(--muted); margin-bottom: 18px; }
+    .about-facts { display: flex; gap: 36px; margin: 34px 0; flex-wrap: wrap; }
+    .fact { display: flex; flex-direction: column; gap: 4px; }
+    .fact-n { font-family: var(--fd); font-size: 38px; color: var(--dark); line-height: 1; }
+    .fact-l { font-size: 13px; color: var(--muted); }
+
+    /* ============================================================
+       3. GALLERY
+       ============================================================ */
+    .gallery-head { text-align: center; margin-bottom: 36px; }
+    .g-filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 32px; }
+    .gf {
+      padding: 9px 20px;
+      background: var(--white);
+      border: 1.5px solid transparent;
+      border-radius: 50px;
+      font-family: var(--fb);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all var(--ease);
+    }
+    .gf:hover { border-color: var(--dark); color: var(--dark); }
+    .gf.active { background: var(--dark); color: var(--bg); border-color: var(--dark); }
+    .g-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-auto-rows: 230px;
+      gap: 16px;
+    }
+    .g-item {
+      position: relative;
+      border-radius: var(--r);
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform var(--ease), box-shadow var(--ease), opacity var(--ease);
+    }
+    .g-item:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
+    .g-item.hidden { opacity: .22; transform: scale(.97); pointer-events: none; }
+    .g-item--tall  { grid-row: span 2; }
+    .g-item--wide  { grid-column: span 2; }
+    .g-ph {
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 12px; color: rgba(255,255,255,.8);
+      font-size: 13px; font-weight: 500;
+    }
+    .g-ph i { font-size: 32px; }
+    .g-ov {
+      position: absolute; inset: 0;
+      background: linear-gradient(to top, rgba(26,26,46,.75) 0%, transparent 60%);
+      display: flex; flex-direction: column;
+      justify-content: flex-end; padding: 20px;
+      opacity: 0; transition: opacity var(--ease);
+      color: #fff;
+    }
+    .g-item:hover .g-ov { opacity: 1; }
+    .g-ov p  { font-weight: 600; font-size: 15px; }
+    .g-ov span { font-size: 12px; opacity: .7; }
+
+    /* ============================================================
+       4. MY BLOG
+       ============================================================ */
+    #blog { background: var(--white); }
+    .blog-head { text-align: center; margin-bottom: 48px; }
+    .blog-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+    .bc {
+      background: var(--bg-alt);
+      border-radius: var(--r);
+      overflow: hidden;
+      box-shadow: 0 2px 14px rgba(26,26,46,.06);
+      display: flex; flex-direction: column;
+      transition: transform var(--ease), box-shadow var(--ease);
+    }
+    .bc:hover { transform: translateY(-5px); box-shadow: var(--shadow); }
+    .bc--feat { grid-column: span 3; flex-direction: row; }
+    .bc--feat .bc-thumb { flex: 0 0 360px; height: auto; border-radius: var(--r) 0 0 var(--r); }
+    .bc--feat .bc-body  { border-radius: 0 var(--r) var(--r) 0; padding: 36px 40px; }
+    .bc-thumb {
+      height: 190px;
+      display: flex; align-items: center; justify-content: center;
+      color: rgba(255,255,255,.7); font-size: 40px; flex-shrink: 0;
+    }
+    .bc-body {
+      padding: 24px; display: flex;
+      flex-direction: column; gap: 10px;
+      flex: 1; background: var(--white);
+    }
+    .btag {
+      display: inline-block;
+      font-size: 10.5px; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase;
+      color: var(--accent); background: var(--accent-l);
+      padding: 4px 10px; border-radius: 50px; width: fit-content;
+    }
+    .bc-title {
+      font-family: var(--fd); font-size: 20px;
+      font-weight: 400; color: var(--dark); line-height: 1.3;
+    }
+    .bc--feat .bc-title { font-size: 26px; }
+    .bc-exc { font-size: 14px; line-height: 1.75; color: var(--muted); flex: 1; }
+    .bc-meta { display: flex; gap: 16px; font-size: 12px; color: var(--muted); }
+    .bc-meta i { margin-right: 5px; }
+    .bc-more {
+      font-size: 13px; font-weight: 600; color: var(--dark);
+      display: flex; align-items: center; gap: 6px;
+      width: fit-content;
+      transition: color var(--ease), gap var(--ease);
+    }
+    .bc-more:hover { color: var(--accent); gap: 10px; }
+
+    /* ============================================================
+       5. UPDATES
+       ============================================================ */
+    .updates-head { text-align: center; margin-bottom: 56px; }
+    .timeline {
+      max-width: 780px; margin: 0 auto 64px;
+      position: relative;
+    }
+    .timeline::before {
+      content: ''; position: absolute;
+      left: 96px; top: 0; bottom: 0;
+      width: 2px;
+      background: linear-gradient(to bottom, var(--accent), transparent);
+    }
+    .tl-item {
+      display: grid;
+      grid-template-columns: 80px 28px 1fr;
+      gap: 0 16px; margin-bottom: 38px;
+      align-items: flex-start;
+    }
+    .tl-date {
+      font-size: 12px; font-weight: 600; color: var(--muted);
+      padding-top: 21px; text-align: right; white-space: nowrap;
+    }
+    .tl-dot {
+      width: 16px; height: 16px;
+      background: var(--accent); border-radius: 50%;
+      border: 3px solid var(--bg);
+      margin-top: 23px; flex-shrink: 0;
+    }
+    .tl-card {
+      background: var(--white); border-radius: var(--r);
+      padding: 24px; box-shadow: 0 2px 14px rgba(26,26,46,.06);
+      transition: transform var(--ease);
+    }
+    .tl-card:hover { transform: translateX(4px); }
+    .tl-card h3 {
+      font-family: var(--fd); font-size: 20px;
+      font-weight: 400; color: var(--dark);
+      margin: 9px 0 7px;
+    }
+    .tl-card p { font-size: 14px; color: var(--muted); line-height: 1.75; }
+    .ubadge {
+      display: inline-block;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase;
+      padding: 3px 10px; border-radius: 50px;
+    }
+    .ub-new       { background:#d4f7e7; color:#0d7a3f; }
+    .ub-travel    { background:#dde8fb; color:#2353b5; }
+    .ub-project   { background:#fde8ee; color:var(--accent); }
+    .ub-milestone { background:#fef3d7; color:#b57f0a; }
+    .ub-reading   { background:#ede8fb; color:#6b35b5; }
+    .nl-box {
+      max-width: 680px; margin: 0 auto;
+      background: var(--dark); border-radius: var(--r);
+      padding: 44px; text-align: center; color: var(--bg);
+    }
+    .nl-box h3 { font-family: var(--fd); font-size: 28px; margin-bottom: 10px; }
+    .nl-box p  { color: rgba(255,255,255,.6); font-size: 15px; margin-bottom: 26px; }
+    .nl-form   { display: flex; gap: 12px; max-width: 440px; margin: 0 auto; }
+    .nl-input  {
+      flex: 1; padding: 13px 20px;
+      border-radius: 50px; border: none;
+      font-family: var(--fb); font-size: 14px; outline: none;
+    }
+
+    /* ============================================================
+       6. CONTACT
+       ============================================================ */
+    #contact { background: var(--white); }
+    .contact-head { text-align: center; margin-bottom: 56px; }
+    .contact-grid {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 64px; align-items: flex-start;
+    }
+    .ci h3 { font-family: var(--fd); font-size: 22px; margin-bottom: 28px; color: var(--dark); }
+    .cd { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 24px; }
+    .cd-icon {
+      width: 44px; height: 44px;
+      background: var(--bg); border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; color: var(--accent); flex-shrink: 0;
+    }
+    .cd-lbl {
+      display: block; font-size: 10.5px; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 2px;
+    }
+    .cd a { font-size: 14px; transition: color var(--ease); }
+    .cd a:hover { color: var(--accent); }
+    .avail {
+      display: flex; align-items: center;
+      gap: 10px; margin-top: 32px;
+      font-size: 13px; color: var(--muted);
+    }
+    .avail-dot {
+      width: 10px; height: 10px;
+      background: #22c55e; border-radius: 50%;
+      flex-shrink: 0; animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 0 0 3px rgba(34,197,94,.25); }
+      50%      { box-shadow: 0 0 0 6px rgba(34,197,94,.1); }
+    }
+    .cf-wrap {
+      background: var(--bg-alt); border-radius: var(--r);
+      padding: 40px; box-shadow: var(--shadow);
+    }
+    .cf { display: flex; flex-direction: column; gap: 20px; }
+    .f-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .fg { display: flex; flex-direction: column; gap: 8px; }
+    .fg label { font-size: 13px; font-weight: 600; color: var(--text); }
+    .fg input, .fg textarea {
+      padding: 13px 18px;
+      border: 1.5px solid var(--border); border-radius: 12px;
+      font-family: var(--fb); font-size: 14px; color: var(--text);
+      background: var(--white); outline: none; resize: vertical;
+      transition: border-color var(--ease), box-shadow var(--ease);
+    }
+    .fg input:focus, .fg textarea:focus {
+      border-color: var(--dark);
+      box-shadow: 0 0 0 3px rgba(26,26,46,.07);
+    }
+    .btn-full { width: 100%; justify-content: center; }
+
+    /* ============================================================
+       FOOTER
+       ============================================================ */
+    footer {
+      text-align: center; padding: 28px;
+      font-size: 13px;
+      background: var(--dark);
+      color: rgba(255,255,255,.4);
+    }
+    footer span { color: var(--accent); }
+
+    /* ============================================================
+       RESPONSIVE
+       ============================================================ */
+    @media (max-width: 1024px) {
+      section { padding: calc(var(--nav-h) + 60px) 48px 80px; }
+      .g-grid { grid-template-columns: repeat(3, 1fr); }
+      .blog-grid { grid-template-columns: repeat(2, 1fr); }
+      .bc--feat { grid-column: span 2; }
+      .contact-grid { grid-template-columns: 1fr; gap: 40px; }
+    }
+
+    @media (max-width: 768px) {
+      .nav-wrap { padding: 0 24px; }
+      .nav-links {
+        position: fixed;
+        top: calc(var(--nav-h) + 10px);
+        right: 18px; left: 18px;
+        width: auto; min-width: unset;
+        background: rgba(235,241,255,.97);
+        flex-direction: column;
+        align-items: stretch;
+        padding: 14px 12px;
+        box-shadow: 0 8px 32px rgba(16,24,40,.14);
+        transform: translateY(-12px);
+        opacity: 0; pointer-events: none;
+        transition: transform var(--ease), opacity var(--ease);
+        z-index: 999; gap: 2px; border-radius: 20px;
+        border: 1px solid rgba(16,24,40,.09);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+      }
+      .nav-links.open { transform: translateY(0); opacity: 1; pointer-events: auto; }
+      .nav-links a {
+        padding: 16px 10px; width: 100%; text-align: center;
+        font-size: 13px; letter-spacing: .14em;
+        color: rgba(16,24,40,.65); border-radius: 999px; display: block;
+      }
+      .nav-links a:hover, .nav-links a.active {
+        color: rgba(16,24,40,.92); background: rgba(16,24,40,.10);
+      }
+      #hamburger { display: flex; }
+      section { padding: calc(var(--nav-h) + 40px) 24px 60px; }
+      #home {
+        flex-direction: column-reverse; justify-content: center;
+        text-align: center; gap: 30px;
+        min-height: auto; padding-top: calc(var(--nav-h) + 24px);
+      }
+      .hero-img-wrap { min-height: 240px; width: 100%; }
+      .hero-photo { max-height: 240px; }
+      .hero-desc { margin: 0 auto 28px; }
+      .social-widget { width: 100%; }
+      .sw-links { justify-content: center; }
+      #about { flex-direction: column; gap: 36px; }
+      .about-img-wrap { height: 280px; }
+      .g-grid { grid-template-columns: repeat(2, 1fr); }
+      .g-item--wide { grid-column: span 1; }
+      .blog-grid { grid-template-columns: 1fr; }
+      .bc--feat { grid-column: span 1; flex-direction: column; }
+      .bc--feat .bc-thumb { flex: 0 0 200px; border-radius: var(--r) var(--r) 0 0; }
+      .bc--feat .bc-body  { border-radius: 0 0 var(--r) var(--r); }
+      .timeline::before { left: 76px; }
+      .tl-item { grid-template-columns: 60px 20px 1fr; }
+      .f-row { grid-template-columns: 1fr; }
+    }
+
+    /* ============================================================
+       LETS TALK FLOATING BUTTON
+       ============================================================ */
+    #letsTalkBtn {
+      position: fixed; bottom: 92px; right: 32px; z-index: 999;
+      display: inline-flex; align-items: center; justify-content: center;
+      flex-direction: row-reverse; gap: 0; overflow: hidden;
+      background: var(--accent); color: #fff;
+      font-family: var(--fb); font-size: 14px; font-weight: 600;
+      border-radius: 50px; padding: 13px; width: 48px; height: 48px;
+      box-shadow: 0 4px 20px rgba(232,21,74,.35);
+      transition: width 0.38s cubic-bezier(.4,0,.2,1),
+                  height 0.38s cubic-bezier(.4,0,.2,1),
+                  padding 0.38s cubic-bezier(.4,0,.2,1),
+                  gap 0.38s cubic-bezier(.4,0,.2,1),
+                  background var(--ease), box-shadow var(--ease), transform var(--ease);
+      text-decoration: none; white-space: nowrap; cursor: pointer;
+    }
+    #letsTalkBtn i { font-size: 18px; flex-shrink: 0; line-height: 1; }
+    #letsTalkBtn .lbt-label {
+      max-width: 0; overflow: hidden; opacity: 0;
+      transition: max-width 0.38s cubic-bezier(.4,0,.2,1),
+                  opacity 0.25s ease, margin 0.38s cubic-bezier(.4,0,.2,1);
+      margin-left: 0;
+    }
+    #letsTalkBtn:hover {
+      width: 148px; height: 48px; padding: 13px 16px 13px 20px;
+      gap: 10px; background: #c5103d;
+      box-shadow: 0 6px 24px rgba(232,21,74,.45); transform: translateY(-2px);
+    }
+    #letsTalkBtn:hover .lbt-label { max-width: 120px; opacity: 1; }
+
+    /* ============================================================
+       BACK TO TOP
+       ============================================================ */
+    #backToTop {
+      position: fixed; bottom: 32px; right: 32px; z-index: 999;
+      width: 48px; height: 48px; background: var(--dark); color: var(--bg);
+      border: none; border-radius: 50%; font-size: 16px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 20px rgba(26,26,46,.25);
+      opacity: 0; transform: translateY(16px);
+      transition: opacity var(--ease), transform var(--ease), background var(--ease), box-shadow var(--ease);
+      pointer-events: none;
+    }
+    #backToTop.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    #backToTop:hover {
+      background: var(--accent); color: #fff;
+      box-shadow: 0 6px 24px rgba(232,21,74,.35); transform: translateY(-3px);
+    }
+
+    /* ============================================================
+       GALLERY POPUP MODAL
+       ============================================================ */
+    .g-modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(26,26,46,.85); backdrop-filter: blur(8px);
+      z-index: 2000; display: flex; align-items: center; justify-content: center;
+      padding: 24px; opacity: 0; pointer-events: none; transition: opacity .3s ease;
+    }
+    .g-modal-overlay.open { opacity: 1; pointer-events: auto; }
+    .g-modal {
+      background: var(--white); border-radius: 20px;
+      max-width: 820px; width: 100%; overflow: hidden;
+      box-shadow: 0 32px 80px rgba(26,26,46,.3);
+      transform: scale(.93); transition: transform .3s cubic-bezier(.4,0,.2,1);
+    }
+    .g-modal-overlay.open .g-modal { transform: scale(1); }
+    .g-modal-thumb {
+      width: 100%; height: 400px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 64px; color: rgba(255,255,255,.8);
+    }
+    .g-modal-body { padding: 32px 36px 36px; }
+    .g-modal-body h3 { font-family: var(--fd); font-size: 26px; color: var(--dark); margin-bottom: 6px; }
+    .g-modal-body .g-modal-cat { font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); }
+    .g-modal-close {
+      position: absolute; top: 16px; right: 16px;
+      width: 40px; height: 40px; background: rgba(255,255,255,.15);
+      border: none; border-radius: 50%; color: #fff; font-size: 18px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background var(--ease);
+    }
+    .g-modal-close:hover { background: rgba(255,255,255,.3); }
+
+    /* ============================================================
+       BLOG POST POPUP MODAL
+       ============================================================ */
+    .blog-modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(26,26,46,.85); backdrop-filter: blur(8px);
+      z-index: 2000; display: flex; align-items: center; justify-content: center;
+      padding: 24px; opacity: 0; pointer-events: none; transition: opacity .3s ease;
+    }
+    .blog-modal-overlay.open { opacity: 1; pointer-events: auto; }
+    .blog-modal {
+      background: var(--white); border-radius: 20px;
+      max-width: 860px; width: 100%; max-height: 90vh; overflow-y: auto;
+      box-shadow: 0 32px 80px rgba(26,26,46,.3);
+      transform: scale(.93); transition: transform .3s cubic-bezier(.4,0,.2,1);
+    }
+    .blog-modal-overlay.open .blog-modal { transform: scale(1); }
+    .blog-modal-hero {
+      width: 100%; height: 300px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 64px; color: rgba(255,255,255,.8); flex-shrink: 0;
+    }
+    .blog-modal-body { padding: 40px; }
+    .blog-modal-body .btag { margin-bottom: 12px; }
+    .blog-modal-body h2 { font-family: var(--fd); font-size: 30px; color: var(--dark); line-height: 1.3; margin-bottom: 16px; }
+    .blog-modal-body .bc-meta { margin-bottom: 24px; }
+    .blog-modal-body .post-content { font-size: 15px; line-height: 1.85; color: var(--muted); }
+    .blog-modal-body .post-content p { margin-bottom: 16px; }
+    .blog-modal-close {
+      position: absolute; top: 16px; right: 16px;
+      width: 40px; height: 40px; background: rgba(255,255,255,.15);
+      border: none; border-radius: 50%; color: #fff; font-size: 18px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background var(--ease);
+    }
+    .blog-modal-close:hover { background: rgba(255,255,255,.3); }
+
+    /* ============================================================
+       CHATBOT WIDGET
+       ============================================================ */
+    #chatWidget {
+      position: fixed; bottom: 92px; right: 32px; z-index: 1100;
+      width: 370px; max-height: 560px;
+      background: var(--white); border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(26,26,46,.10);
+      display: flex; flex-direction: column;
+      overflow: hidden; pointer-events: auto;
+      opacity: 0; transform: scale(0.85) translateY(20px);
+      transform-origin: bottom right;
+      transition: opacity 0.28s cubic-bezier(.4,0,.2,1), transform 0.28s cubic-bezier(.4,0,.2,1);
+      visibility: hidden;
+    }
+    #chatWidget.open {
+      opacity: 1; transform: scale(1) translateY(0); visibility: visible;
+    }
+    .chat-header {
+      background: var(--dark); color: #fff;
+      padding: 14px 18px; display: flex; align-items: center; gap: 12px;
+      flex-shrink: 0;
+    }
+    .chat-avatar {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: var(--accent); display: flex; align-items: center; justify-content: center;
+      font-size: 17px; flex-shrink: 0;
+    }
+    .chat-header-info { flex: 1; }
+    .chat-header-name { font-weight: 700; font-size: 14px; }
+    .chat-header-status { font-size: 11px; opacity: .65; display: flex; align-items: center; gap: 5px; }
+    .chat-status-dot { width: 7px; height: 7px; background: #22c55e; border-radius: 50%; display: inline-block; }
+    .chat-close-btn {
+      background: none; border: none; color: #fff; cursor: pointer;
+      font-size: 16px; opacity: .7; padding: 4px; transition: opacity .2s;
+    }
+    .chat-close-btn:hover { opacity: 1; }
+    .chat-messages {
+      flex: 1; overflow-y: auto; padding: 16px;
+      display: flex; flex-direction: column; gap: 10px;
+      min-height: 300px; max-height: 380px;
+      scroll-behavior: smooth;
+    }
+    .chat-messages::-webkit-scrollbar { width: 4px; }
+    .chat-messages::-webkit-scrollbar-track { background: transparent; }
+    .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .chat-bubble {
+      max-width: 82%; padding: 10px 14px; border-radius: 16px;
+      font-size: 13.5px; line-height: 1.55; word-break: break-word;
+    }
+    .chat-bubble.bot {
+      background: var(--bg-alt); color: var(--text);
+      border-bottom-left-radius: 4px; align-self: flex-start;
+    }
+    .chat-bubble.user {
+      background: var(--accent); color: #fff;
+      border-bottom-right-radius: 4px; align-self: flex-end;
+    }
+    .chat-bubble.typing {
+      background: var(--bg-alt); align-self: flex-start;
+      padding: 12px 16px;
+    }
+    .typing-dots { display: flex; gap: 4px; align-items: center; }
+    .typing-dots span {
+      width: 7px; height: 7px; background: var(--muted);
+      border-radius: 50%; animation: typingBounce 1.2s infinite;
+    }
+    .typing-dots span:nth-child(2) { animation-delay: .2s; }
+    .typing-dots span:nth-child(3) { animation-delay: .4s; }
+    @keyframes typingBounce {
+      0%,60%,100% { transform: translateY(0); }
+      30% { transform: translateY(-6px); }
+    }
+    .chat-input-row {
+      padding: 12px 14px; border-top: 1px solid var(--border);
+      display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0;
+      background: var(--white);
+    }
+    #chatInput {
+      flex: 1; border: 1.5px solid var(--border); border-radius: 12px;
+      padding: 9px 13px; font-family: var(--fb); font-size: 13.5px;
+      color: var(--text); background: var(--bg); resize: none;
+      outline: none; max-height: 100px; overflow-y: auto;
+      transition: border-color .2s;
+    }
+    #chatInput:focus { border-color: var(--accent); }
+    #chatSendBtn {
+      width: 38px; height: 38px; border-radius: 50%; border: none;
+      background: var(--accent); color: #fff; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; flex-shrink: 0;
+      transition: background .2s, transform .15s;
+    }
+    #chatSendBtn:hover { background: #c5103d; transform: scale(1.08); }
+    #chatSendBtn:disabled { background: var(--muted); cursor: not-allowed; transform: none; }
+    @media (max-width: 480px) {
+      #chatWidget { width: calc(100vw - 32px); right: 16px; bottom: 80px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════ NAVBAR ═══════════════ -->
+<nav id="navbar">
+  <div class="nav-wrap">
+    <a href="#home" class="nav-logo">CN</a>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="#home" class="active">Home</a></li>
+      <li><a href="#about">About</a></li>
+      <li><a href="#gallery">Gallery</a></li>
+      <li><a href="#blog">My Blog</a></li>
+      <li><a href="#updates">Updates</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+    <button id="hamburger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- ═══════════════ 1 · HOME ═══════════════ -->
+<section id="home">
+  <div class="hero-content">
+    <p class="hero-greeting">Hello</p>
+    <h1 class="hero-title">I'm <span class="a">Chanuka</span> Nimsara</h1>
+    <p class="hero-desc">
+      Welcome to my personal space on the web. I share thoughts, creative work,
+      and life updates here — a little corner of the internet that's purely mine.
+    </p>
+    <div class="social-widget">
+      <div class="sw-label">Find me on</div>
+      <div class="sw-links">
+        <a href="https://www.instagram.com/chanukanimsara1?igsh=MXVkajNrc2ZkdmVkcw==" class="sw-pill" target="_blank"><i class="fa-brands fa-instagram"></i> Instagram</a>
+        <a href="https://twitter.com/chanukanimsara" class="sw-pill" target="_blank"><i class="fa-brands fa-x"></i> Twitter</a>
+        <a href="https://www.linkedin.com/in/chanukanimsara" class="sw-pill" target="_blank"><i class="fa-brands fa-linkedin-in"></i> LinkedIn</a>
+        <a href="https://www.facebook.com/share/1CcS5PaHJd/" class="sw-pill" target="_blank"><i class="fa-brands fa-facebook"></i> Facebook</a>
+      </div>
+    </div>
+  </div>
+  <div class="hero-img-wrap">
+    <div class="brush"></div>
+    <img src="/images/profile.png" alt="Chanuka Nimsara" class="hero-photo"/>
+    <div class="scroll-hint" onclick="document.getElementById('about').scrollIntoView({behavior:'smooth'})">
+      <i class="fa-solid fa-chevron-down"></i>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 2 · ABOUT ═══════════════ -->
+<section id="about">
+  <div class="about-img-col reveal">
+    <div class="about-img-wrap">
+      <div class="about-brush"></div>
+      <img src="/images/profile.png" alt="Chanuka Nimsara" class="about-photo"/>
+    </div>
+  </div>
+  <div class="about-col">
+    <p class="tag reveal">About Me</p>
+    <h2 class="sec-title reveal">A little bit about <span class="a">myself</span></h2>
+    <p class="about-bio reveal">
+      Hey! I'm Chanuka — a creative individual passionate about storytelling, photography,
+      and building things online. Based in the world, always exploring. I believe in living
+      intentionally and sharing authentic moments.
+    </p>
+    <p class="about-bio reveal">
+      When I'm not writing or shooting photos you'll find me hiking trails, experimenting
+      in the kitchen, or deep in a good book. This website is where I document the journey.
+    </p>
+    <div class="about-facts reveal">
+      <div class="fact"><span class="fact-n">0+</span><span class="fact-l">Years journaling</span></div>
+      <div class="fact"><span class="fact-n">0</span><span class="fact-l">Blog posts written</span></div>
+      <div class="fact"><span class="fact-n">0</span><span class="fact-l">Countries visited</span></div>
+    </div>
+    <a href="#contact" class="btn reveal">Get In Touch</a>
+  </div>
+</section>
+
+<!-- ═══════════════ 3 · GALLERY ═══════════════ -->
+<section id="gallery">
+  <div class="gallery-head">
+    <p class="tag reveal">Visual Stories</p>
+    <h2 class="sec-title reveal">My <span class="a">Gallery</span></h2>
+    <p class="sec-sub reveal" style="margin:0 auto;">A curated collection of moments captured through my lens.</p>
+  </div>
+  <div class="g-filters reveal">
+    <button class="gf active" data-f="all">All</button>
+    <button class="gf" data-f="travel">Travel</button>
+    <button class="gf" data-f="nature">Nature</button>
+    <button class="gf" data-f="portrait">Portrait</button>
+    <button class="gf" data-f="urban">Urban</button>
+  </div>
+  <div class="g-grid">
+    <div class="g-item reveal" data-c="travel" onclick="openGalleryModal(this)" data-title="Mountain Trails" data-cat="Travel" data-bg="linear-gradient(135deg,#e8d5c4,#c9a98d)" data-icon="fa-mountain-sun">
+      <div class="g-ph" style="background:linear-gradient(135deg,#e8d5c4,#c9a98d)"><i class="fa-solid fa-mountain-sun"></i><span>Mountain Trails</span></div>
+      <div class="g-ov"><p>Mountain Trails</p><span>Travel</span></div>
+    </div>
+    <div class="g-item g-item--tall reveal" data-c="portrait" onclick="openGalleryModal(this)" data-title="Golden Hour" data-cat="Portrait" data-bg="linear-gradient(135deg,#c4d8e8,#8dafc9)" data-icon="fa-user">
+      <div class="g-ph" style="background:linear-gradient(135deg,#c4d8e8,#8dafc9)"><i class="fa-solid fa-user"></i><span>Golden Hour</span></div>
+      <div class="g-ov"><p>Golden Hour</p><span>Portrait</span></div>
+    </div>
+    <div class="g-item reveal" data-c="urban" onclick="openGalleryModal(this)" data-title="City Lights" data-cat="Urban" data-bg="linear-gradient(135deg,#d4e8c4,#9dc98d)" data-icon="fa-city">
+      <div class="g-ph" style="background:linear-gradient(135deg,#d4e8c4,#9dc98d)"><i class="fa-solid fa-city"></i><span>City Lights</span></div>
+      <div class="g-ov"><p>City Lights</p><span>Urban</span></div>
+    </div>
+    <div class="g-item g-item--wide reveal" data-c="nature" onclick="openGalleryModal(this)" data-title="Morning Mist" data-cat="Nature" data-bg="linear-gradient(135deg,#e8c4d8,#c98db8)" data-icon="fa-leaf">
+      <div class="g-ph" style="background:linear-gradient(135deg,#e8c4d8,#c98db8)"><i class="fa-solid fa-leaf"></i><span>Morning Mist</span></div>
+      <div class="g-ov"><p>Morning Mist</p><span>Nature</span></div>
+    </div>
+    <div class="g-item reveal" data-c="travel" onclick="openGalleryModal(this)" data-title="Coastal Roads" data-cat="Travel" data-bg="linear-gradient(135deg,#e8e4c4,#c9c38d)" data-icon="fa-plane">
+      <div class="g-ph" style="background:linear-gradient(135deg,#e8e4c4,#c9c38d)"><i class="fa-solid fa-plane"></i><span>Coastal Roads</span></div>
+      <div class="g-ov"><p>Coastal Roads</p><span>Travel</span></div>
+    </div>
+    <div class="g-item reveal" data-c="nature" onclick="openGalleryModal(this)" data-title="Still Waters" data-cat="Nature" data-bg="linear-gradient(135deg,#c4e8e4,#8dc9c3)" data-icon="fa-water">
+      <div class="g-ph" style="background:linear-gradient(135deg,#c4e8e4,#8dc9c3)"><i class="fa-solid fa-water"></i><span>Still Waters</span></div>
+      <div class="g-ov"><p>Still Waters</p><span>Nature</span></div>
+    </div>
+    <div class="g-item reveal" data-c="urban" onclick="openGalleryModal(this)" data-title="Street Art" data-cat="Urban" data-bg="linear-gradient(135deg,#d8c4e8,#b38dc9)" data-icon="fa-building">
+      <div class="g-ph" style="background:linear-gradient(135deg,#d8c4e8,#b38dc9)"><i class="fa-solid fa-building"></i><span>Street Art</span></div>
+      <div class="g-ov"><p>Street Art</p><span>Urban</span></div>
+    </div>
+    <div class="g-item reveal" data-c="portrait" onclick="openGalleryModal(this)" data-title="Candid Moments" data-cat="Portrait" data-bg="linear-gradient(135deg,#e8c4c4,#c98d8d)" data-icon="fa-face-smile">
+      <div class="g-ph" style="background:linear-gradient(135deg,#e8c4c4,#c98d8d)"><i class="fa-solid fa-face-smile"></i><span>Candid Moments</span></div>
+      <div class="g-ov"><p>Candid Moments</p><span>Portrait</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 4 · MY BLOG ═══════════════ -->
+<section id="blog">
+  <div class="blog-head">
+    <p class="tag reveal">Written Words</p>
+    <h2 class="sec-title reveal">My <span class="a">Blog</span></h2>
+    <p class="sec-sub reveal" style="margin:0 auto;">Thoughts, reflections, and stories from everyday life.</p>
+  </div>
+  <div class="blog-grid">
+    <article class="bc bc--feat reveal"
+      data-tag="Life"
+      data-title="The Art of Slowing Down in a Fast World"
+      data-date="Feb 15, 2026" data-read="6 min read"
+      data-bg="linear-gradient(135deg,#f5e6d3,#e8c9a0)" data-icon="fa-pen-nib"
+      data-content="We live in an age that glorifies busyness. But what happens when we dare to pause and simply breathe?
+
+I spent a month offline — no social media, no notifications, no 24-hour news cycle. What I found surprised me.
+
+The first week was difficult. My hands kept reaching for my phone, muscle memory betraying me at every quiet moment. But by week two, something shifted. I started noticing things again — the way morning light falls across the kitchen floor, the sound of rain on leaves, the feeling of having nowhere to be.
+
+Slowing down isn't about being unproductive. It's about being intentional. Every task done with full presence becomes richer. Every conversation becomes deeper when you're not half-distracted by a screen.
+
+If you've been feeling overwhelmed, I'd invite you to try it — even for a weekend. Turn off notifications. Go for a walk without your phone. Cook a meal slowly. Watch the world without needing to document it.
+
+You might be surprised by what you find in the silence.">
+      <div class="bc-thumb" style="background:linear-gradient(135deg,#f5e6d3,#e8c9a0)"><i class="fa-solid fa-pen-nib"></i></div>
+      <div class="bc-body">
+        <span class="btag">Life</span>
+        <h3 class="bc-title">The Art of Slowing Down in a Fast World</h3>
+        <p class="bc-exc">We live in an age that glorifies busyness. But what happens when we dare to pause and simply breathe? Here's what I learned from a month offline...</p>
+        <div class="bc-meta">
+          <span><i class="fa-regular fa-calendar"></i> Feb 15, 2026</span>
+          <span><i class="fa-regular fa-clock"></i> 6 min read</span>
+        </div>
+        <a href="#" class="bc-more" onclick="openBlogModal(this.closest('article'));return false;">Read more <i class="fa-solid fa-arrow-right"></i></a>
+      </div>
+    </article>
+    <article class="bc reveal"
+      data-tag="Photography"
+      data-title="What My Camera Taught Me About Patience"
+      data-date="Jan 30, 2026" data-read="4 min read"
+      data-bg="linear-gradient(135deg,#d3e6f5,#a0c9e8)" data-icon="fa-camera"
+      data-content="Great shots rarely happen instantly. They're earned through waiting, watching, and learning to see the world differently.
+
+Photography taught me that patience isn't passive — it's an active, alert form of attention. You position yourself, you wait, and you stay ready for the moment that everything aligns.
+
+I remember spending three hours at a train station waiting for the light to hit a particular archway just right. Most people would have given up after thirty minutes. But I'd learned that the best shots live just beyond the point where most people stop waiting.
+
+This applies to so much more than photography. In relationships, we want connection to be instant. In careers, we want recognition now. But the most meaningful things — a career you love, a skill mastered, a relationship deepened — take time.
+
+Your camera is a teacher in patience, in presence, and in learning to see beauty in ordinary moments.">
+      <div class="bc-thumb" style="background:linear-gradient(135deg,#d3e6f5,#a0c9e8)"><i class="fa-solid fa-camera"></i></div>
+      <div class="bc-body">
+        <span class="btag">Photography</span>
+        <h3 class="bc-title">What My Camera Taught Me About Patience</h3>
+        <p class="bc-exc">Great shots rarely happen instantly. They're earned through waiting, watching, and learning to see the world differently...</p>
+        <div class="bc-meta">
+          <span><i class="fa-regular fa-calendar"></i> Jan 30, 2026</span>
+          <span><i class="fa-regular fa-clock"></i> 4 min read</span>
+        </div>
+        <a href="#" class="bc-more" onclick="openBlogModal(this.closest('article'));return false;">Read more <i class="fa-solid fa-arrow-right"></i></a>
+      </div>
+    </article>
+    <article class="bc reveal"
+      data-tag="Travel"
+      data-title="Hidden Gems: Towns You'll Never Find on Lists"
+      data-date="Jan 10, 2026" data-read="8 min read"
+      data-bg="linear-gradient(135deg,#e6f5d3,#c9e8a0)" data-icon="fa-map-location-dot"
+      data-content="Every traveler dreams of discovering places untouched by tourism. Here are five of my most cherished off-the-radar destinations.
+
+The first is a small fishing village on the coast of Portugal — no tour buses, no Instagram influencers. Just cobblestones, salt air, and a bakery that opens at 6am.
+
+The second is a mountain town in northern Sri Lanka where the mist rolls in every morning and the tea estate stretches for miles. I spent four days there and barely saw another foreigner.
+
+What makes these places special isn't just their beauty — it's the feeling of discovery. Of being somewhere that hasn't yet been packaged and sold.
+
+My advice: skip the top-ten lists. Ask locals. Take the unmarked road. Accept invitations from strangers. The best places aren't in any guidebook — they're found through curiosity and a willingness to get a little lost.
+
+The world is much bigger, and much quieter, than the internet would have you believe.">
+      <div class="bc-thumb" style="background:linear-gradient(135deg,#e6f5d3,#c9e8a0)"><i class="fa-solid fa-map-location-dot"></i></div>
+      <div class="bc-body">
+        <span class="btag">Travel</span>
+        <h3 class="bc-title">Hidden Gems: Towns You'll Never Find on Lists</h3>
+        <p class="bc-exc">Every traveler dreams of discovering places untouched by tourism. Here are five of my most cherished off-the-radar destinations...</p>
+        <div class="bc-meta">
+          <span><i class="fa-regular fa-calendar"></i> Jan 10, 2026</span>
+          <span><i class="fa-regular fa-clock"></i> 8 min read</span>
+        </div>
+        <a href="#" class="bc-more" onclick="openBlogModal(this.closest('article'));return false;">Read more <i class="fa-solid fa-arrow-right"></i></a>
+      </div>
+    </article>
+    <article class="bc reveal"
+      data-tag="Reflection"
+      data-title="Books That Changed the Way I See People"
+      data-date="Dec 22, 2025" data-read="5 min read"
+      data-bg="linear-gradient(135deg,#f5d3e6,#e8a0c9)" data-icon="fa-book-open"
+      data-content="A short list of reads that expanded my empathy, challenged my assumptions, and made me a better listener.
+
+The first book I'd recommend is one about the hidden emotional lives of strangers — how little we actually know about the people around us, and how dangerous our assumptions can be.
+
+The second changed how I think about conversation. Most of us listen to reply, not to understand. The book showed me what it means to truly hear someone — to hold space for their reality without rushing to fix or judge.
+
+The third was a memoir that taught me vulnerability is not weakness. The author shared their most difficult moments with a courage that made me reflect on how guarded I'd been in my own relationships.
+
+These books didn't teach me facts. They taught me how to feel — more accurately, more generously, more humanly.
+
+If you want to become kinder and more connected, start with the books that challenge you to see the world from eyes that aren't your own.">
+      <div class="bc-thumb" style="background:linear-gradient(135deg,#f5d3e6,#e8a0c9)"><i class="fa-solid fa-book-open"></i></div>
+      <div class="bc-body">
+        <span class="btag">Reflection</span>
+        <h3 class="bc-title">Books That Changed the Way I See People</h3>
+        <p class="bc-exc">A short list of reads that expanded my empathy, challenged my assumptions, and made me a better listener...</p>
+        <div class="bc-meta">
+          <span><i class="fa-regular fa-calendar"></i> Dec 22, 2025</span>
+          <span><i class="fa-regular fa-clock"></i> 5 min read</span>
+        </div>
+        <a href="#" class="bc-more" onclick="openBlogModal(this.closest('article'));return false;">Read more <i class="fa-solid fa-arrow-right"></i></a>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- ═══════════════ 5 · UPDATES ═══════════════ -->
+<section id="updates">
+  <div class="updates-head">
+    <p class="tag reveal">What's New</p>
+    <h2 class="sec-title reveal"><span class="a">Updates</span></h2>
+    <p class="sec-sub reveal" style="margin:0 auto;">A living log of what I'm up to — projects, milestones, and life moments.</p>
+  </div>
+  <div class="timeline">
+    <div class="tl-item reveal">
+      <div class="tl-date">Mar 2026</div><div class="tl-dot"></div>
+      <div class="tl-card">
+        <span class="ubadge ub-new">New</span>
+        <h3>Launched My Personal Website 🎉</h3>
+        <p>After months of planning, my personal corner of the web is finally live. Excited to share my journey, photography, and writing here!</p>
+      </div>
+    </div>
+    <div class="tl-item reveal">
+      <div class="tl-date">Feb 2026</div><div class="tl-dot"></div>
+      <div class="tl-card">
+        <span class="ubadge ub-travel">Travel</span>
+        <h3>Back from 3 Weeks in Southeast Asia</h3>
+        <p>Visited Vietnam, Cambodia, and Thailand. Shot over 2,000 photos. Full travel diary coming to the blog soon. Soul feels refreshed.</p>
+      </div>
+    </div>
+    <div class="tl-item reveal">
+      <div class="tl-date">Jan 2026</div><div class="tl-dot"></div>
+      <div class="tl-card">
+        <span class="ubadge ub-project">Project</span>
+        <h3>Started a 365-Day Photography Challenge</h3>
+        <p>One photo every single day for a full year. Follow along in the Gallery section. Day 1 was a foggy sunrise from my balcony.</p>
+      </div>
+    </div>
+    <div class="tl-item reveal">
+      <div class="tl-date">Dec 2025</div><div class="tl-dot"></div>
+      <div class="tl-card">
+        <span class="ubadge ub-milestone">Milestone</span>
+        <h3>Hit 10,000 Newsletter Subscribers</h3>
+        <p>My Sunday letter now reaches over 10,000 readers every week. Genuinely overwhelmed by the love and support. Thank you all.</p>
+      </div>
+    </div>
+    <div class="tl-item reveal">
+      <div class="tl-date">Sep 2025</div><div class="tl-dot"></div>
+      <div class="tl-card">
+        <span class="ubadge ub-project">Project</span>
+        <h3>Published My First Photography Zine</h3>
+        <p>A limited print run of 200 copies featuring 40 pages of street and travel photography from the past two years. Sold out in 48 hours!</p>
+      </div>
+    </div>
+  </div>
+  <div class="nl-box reveal">
+    <h3>Get updates in your inbox</h3>
+    <p>Join the Sunday letter — personal stories, links I love, and life behind the lens.</p>
+    <div class="nl-form" id="nlForm">
+      <input type="email" id="nlEmail" placeholder="your@email.com" class="nl-input"/>
+      <button class="btn" onclick="handleNewsletter()">Subscribe</button>
+    </div>
+    <p id="nlThanks" style="display:none; margin-top:16px; color:#22c55e; font-weight:600; font-size:15px;">
+      🎉 You're in! Welcome to the Sunday letter.
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════ 6 · CONTACT ═══════════════ -->
+<section id="contact">
+  <div class="contact-head">
+    <p class="tag reveal">Say Hello</p>
+    <h2 class="sec-title reveal">Let's <span class="a">Talk</span></h2>
+    <p class="sec-sub reveal" style="margin:0 auto;">Whether it's a collaboration, a question, or just a hello — I'd love to hear from you.</p>
+  </div>
+  <div class="contact-grid">
+    <div class="ci reveal">
+      <h3>Find me here</h3>
+      <div class="cd">
+        <div class="cd-icon"><i class="fa-solid fa-envelope"></i></div>
+        <div><span class="cd-lbl">Email</span><a href="mailto:chanukanimsarablog@gmail.com">chanukanimsarablog@gmail.com</a></div>
+      </div>
+      <div class="cd">
+        <div class="cd-icon"><i class="fa-brands fa-instagram"></i></div>
+        <div><span class="cd-lbl">Instagram</span><a href="https://www.instagram.com/chanukanimsara1?igsh=MXVkajNrc2ZkdmVkcw==" target="_blank">chanukanimsara</a></div>
+      </div>
+      <div class="cd">
+        <div class="cd-icon"><i class="fa-brands fa-x" style="font-size:16px;"></i></div>
+        <div><span class="cd-lbl">Twitter / X</span><a href="https://twitter.com/chanukanimsara" target="_blank">@chanukanimsara</a></div>
+      </div>
+      <div class="cd">
+        <div class="cd-icon"><i class="fa-brands fa-linkedin-in"></i></div>
+        <div><span class="cd-lbl">LinkedIn</span><a href="https://www.linkedin.com/in/chanukanimsara" target="_blank">Chanuka Nimsara</a></div>
+      </div>
+      <div class="cd">
+        <div class="cd-icon"><i class="fa-brands fa-facebook"></i></div>
+        <div><span class="cd-lbl">Facebook</span><a href="https://www.facebook.com/share/1CcS5PaHJd/" target="_blank">Chanuka Nimsara</a></div>
+      </div>
+      <div class="avail">
+        <span class="avail-dot"></span>
+        <span>Available for collaborations &amp; conversations</span>
+      </div>
+    </div>
+    <div class="cf-wrap reveal">
+      <div id="form-success" style="display:none; padding:16px 20px; background:#d4f7e7; color:#0d7a3f; border-radius:12px; font-size:14px; font-weight:500; align-items:center; gap:10px; margin-bottom:20px;">
+        <i class="fa-solid fa-circle-check" style="font-size:20px;"></i>
+        <span>Thanks! Your message has been sent. I'll get back to you soon.</span>
+      </div>
+      <form class="cf" id="theForm" novalidate>
+        <div class="f-row">
+          <div class="fg">
+            <label for="fname">Your Name</label>
+            <input type="text" id="fname" placeholder="James Smith" required/>
+          </div>
+          <div class="fg">
+            <label for="femail">Email Address</label>
+            <input type="email" id="femail" placeholder="you@example.com" required/>
+          </div>
+        </div>
+        <div class="fg">
+          <label for="fsubject">Subject</label>
+          <input type="text" id="fsubject" placeholder="What's this about?" required/>
+        </div>
+        <div class="fg">
+          <label for="fmessage">Message</label>
+          <textarea id="fmessage" rows="6" placeholder="Hi Chanuka, I wanted to reach out about..." required></textarea>
+        </div>
+        <button type="submit" class="btn btn-full">
+          Send Message <i class="fa-solid fa-paper-plane"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ GALLERY POPUP MODAL ═══════════════ -->
+<div class="g-modal-overlay" id="galleryModal" onclick="if(event.target===this)closeGalleryModal()">
+  <div class="g-modal" style="position:relative;">
+    <button class="g-modal-close" onclick="closeGalleryModal()"><i class="fa-solid fa-xmark"></i></button>
+    <div class="g-modal-thumb" id="gModalThumb"></div>
+    <div class="g-modal-body">
+      <div class="g-modal-cat" id="gModalCat"></div>
+      <h3 id="gModalTitle"></h3>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ BLOG POST POPUP MODAL ═══════════════ -->
+<div class="blog-modal-overlay" id="blogModal" onclick="if(event.target===this)closeBlogModal()">
+  <div class="blog-modal" style="position:relative;">
+    <button class="blog-modal-close" onclick="closeBlogModal()"><i class="fa-solid fa-xmark"></i></button>
+    <div class="blog-modal-hero" id="bModalHero"></div>
+    <div class="blog-modal-body">
+      <span class="btag" id="bModalTag"></span>
+      <h2 id="bModalTitle"></h2>
+      <div class="bc-meta" id="bModalMeta"></div>
+      <div class="post-content" id="bModalContent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ FOOTER ═══════════════ -->
+<footer>
+  © 2026 <span>Chanuka Nimsara</span>. Made with ♥ and a lot of coffee.
+</footer>
+
+<!-- ═══════════════ LETS TALK BUTTON ═══════════════ -->
+<button id="letsTalkBtn" aria-label="Let's Talk" onclick="toggleChat()">
+  <i class="fa-solid fa-comment-dots" id="letsTalkIcon"></i>
+  <span class="lbt-label">Let's Talk</span>
+</button>
+
+<!-- ═══════════════ CHATBOT WIDGET ═══════════════ -->
+<div id="chatWidget">
+  <div class="chat-header">
+    <div class="chat-avatar"><i class="fa-solid fa-robot"></i></div>
+    <div class="chat-header-info">
+      <div class="chat-header-name">Chanuka's Assistant</div>
+      <div class="chat-header-status"><span class="chat-status-dot"></span> Online</div>
+    </div>
+    <button class="chat-close-btn" onclick="toggleChat()" aria-label="Close chat">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+  </div>
+  <div class="chat-messages" id="chatMessages"></div>
+  <div class="chat-input-row">
+    <textarea id="chatInput" rows="1" placeholder="Ask me anything…" onkeydown="chatKeyDown(event)"></textarea>
+    <button id="chatSendBtn" onclick="sendChat()" aria-label="Send">
+      <i class="fa-solid fa-paper-plane"></i>
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════ BACK TO TOP ═══════════════ -->
+<button id="backToTop" aria-label="Back to top" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+  <i class="fa-solid fa-chevron-up"></i>
+</button>
+
+<!-- ═══════════════ JAVASCRIPT ═══════════════ -->
+<script>
+  /* ── THEME: fixed light (no system auto-change) ───────────── */
+  document.documentElement.setAttribute('data-theme', 'light');
+
+  /* Navbar scroll + active link */
+  const navbar   = document.getElementById('navbar');
+  const sections = document.querySelectorAll('section[id]');
+
+  function updateActive() {
+    let cur = '';
+    sections.forEach(s => { if (window.scrollY >= s.offsetTop - 120) cur = s.id; });
+    document.querySelectorAll('.nav-links a').forEach(a => {
+      a.classList.toggle('active', a.getAttribute('href') === `#${cur}`);
+    });
+  }
+
+  window.addEventListener('scroll', () => {
+    navbar.classList.toggle('scrolled', window.scrollY > 20);
+    updateActive();
+  });
+
+  /* Hamburger */
+  const hamburger = document.getElementById('hamburger');
+  const navLinks  = document.getElementById('navLinks');
+
+  hamburger.addEventListener('click', () => {
+    const open = navLinks.classList.toggle('open');
+    const s = hamburger.querySelectorAll('span');
+    if (open) {
+      s[0].style.transform = 'rotate(45deg) translate(5px,5px)';
+      s[1].style.opacity = '0';
+      s[2].style.transform = 'rotate(-45deg) translate(5px,-5px)';
+    } else {
+      s.forEach(x => { x.style.transform = ''; x.style.opacity = ''; });
+    }
+  });
+
+  navLinks.querySelectorAll('a').forEach(a => {
+    a.addEventListener('click', () => {
+      navLinks.classList.remove('open');
+      hamburger.querySelectorAll('span').forEach(s => { s.style.transform = ''; s.style.opacity = ''; });
+    });
+  });
+
+  /* Gallery filter */
+  document.querySelectorAll('.gf').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.gf').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const f = btn.dataset.f;
+      document.querySelectorAll('.g-item').forEach(item => {
+        item.classList.toggle('hidden', f !== 'all' && item.dataset.c !== f);
+      });
+    });
+  });
+
+  /* Scroll reveal */
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach((e, i) => {
+      if (e.isIntersecting) {
+        setTimeout(() => e.target.classList.add('visible'), i * 65);
+        obs.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+  /* CONTACT FORM */
+  document.getElementById('theForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const form = this;
+    const inputs = form.querySelectorAll('[required]');
+    let ok = true;
+    inputs.forEach(inp => {
+      if (!inp.value.trim()) {
+        ok = false;
+        inp.style.borderColor = '#e8154a';
+        inp.addEventListener('input', () => inp.style.borderColor = '', { once: true });
+      }
+    });
+    if (!ok) return;
+    const btn = form.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.innerHTML = 'Sending… <i class="fa-solid fa-spinner fa-spin"></i>';
+    try {
+      const res = await fetch('/send-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: document.getElementById('fname').value.trim(),
+          email: document.getElementById('femail').value.trim(),
+          subject: document.getElementById('fsubject').value.trim(),
+          message: document.getElementById('fmessage').value.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('form-success').style.display = 'flex';
+        form.reset(); form.style.display = 'none';
+        setTimeout(() => {
+          document.getElementById('form-success').style.display = 'none';
+          form.style.display = 'block';
+          btn.disabled = false;
+          btn.innerHTML = 'Send Message <i class="fa-solid fa-paper-plane"></i>';
+        }, 5000);
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = 'Send Message <i class="fa-solid fa-paper-plane"></i>';
+        alert('Sorry, something went wrong. Please try again later.');
+      }
+    } catch {
+      btn.disabled = false;
+      btn.innerHTML = 'Send Message <i class="fa-solid fa-paper-plane"></i>';
+      alert('Network error. Please check your connection and try again.');
+    }
+  });
+
+  /* NEWSLETTER */
+  async function handleNewsletter() {
+    const emailInput = document.getElementById("nlEmail");
+    const formDiv    = document.getElementById("nlForm");
+    const thanksMsg  = document.getElementById("nlThanks");
+    const email = emailInput.value.trim();
+    if (!email) {
+      emailInput.style.borderColor = '#e8154a';
+      emailInput.addEventListener('input', () => emailInput.style.borderColor = '', { once: true });
+      return;
+    }
+    try {
+      const res = await fetch("/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
+      const result = await res.json();
+      if (result.success) {
+        formDiv.style.display = "none";
+        thanksMsg.style.display = "block";
+        emailInput.value = "";
+        setTimeout(() => { formDiv.style.display = "flex"; thanksMsg.style.display = "none"; }, 5000);
+      } else {
+        alert("Subscription failed. Please try again.");
+      }
+    } catch {
+      alert("Network error. Please try again.");
+    }
+  }
+
+  /* GALLERY POPUP */
+  function openGalleryModal(el) {
+    document.getElementById('gModalThumb').style.background = el.dataset.bg;
+    document.getElementById('gModalThumb').innerHTML = `<i class="fa-solid ${el.dataset.icon}" style="font-size:64px;color:rgba(255,255,255,.75);"></i>`;
+    document.getElementById('gModalTitle').textContent = el.dataset.title;
+    document.getElementById('gModalCat').textContent = el.dataset.cat;
+    document.getElementById('galleryModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeGalleryModal() {
+    document.getElementById('galleryModal').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  /* BLOG POST POPUP */
+  function openBlogModal(article) {
+    document.getElementById('bModalHero').style.background = article.dataset.bg;
+    document.getElementById('bModalHero').innerHTML = `<i class="fa-solid ${article.dataset.icon}" style="font-size:64px;color:rgba(255,255,255,.75);"></i>`;
+    document.getElementById('bModalTag').textContent = article.dataset.tag;
+    document.getElementById('bModalTitle').textContent = article.dataset.title;
+    document.getElementById('bModalMeta').innerHTML =
+      `<span><i class="fa-regular fa-calendar"></i> ${article.dataset.date}</span>
+       &nbsp;&nbsp;<span><i class="fa-regular fa-clock"></i> ${article.dataset.read}</span>`;
+    const paragraphs = article.dataset.content.split('\n\n').map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
+    document.getElementById('bModalContent').innerHTML = paragraphs;
+    const modal = document.getElementById('blogModal');
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    modal.querySelector('.blog-modal').scrollTop = 0;
+  }
+  function closeBlogModal() {
+    document.getElementById('blogModal').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeGalleryModal(); closeBlogModal(); }
+  });
+
+  /* Back to top */
+  const backToTop = document.getElementById('backToTop');
+  window.addEventListener('scroll', () => {
+    backToTop.classList.toggle('visible', window.scrollY > 400);
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     CHATBOT
+  ══════════════════════════════════════════════════════════════ */
+  const CHAT_HISTORY  = [];
+  const SYSTEM_PROMPT = `You are a friendly AI assistant on Chanuka Nimsara's personal website. Chanuka is a blogger, creative professional, and web developer from Sri Lanka. You help visitors learn about Chanuka, his work, blog, gallery, and how to get in touch. Keep replies concise (2-4 sentences), warm, and helpful. If asked something you don't know about Chanuka, suggest they use the contact form.`;
+
+  let chatOpen   = false;
+  let chatBooted = false;
+
+  function toggleChat() {
+    chatOpen = !chatOpen;
+    document.getElementById('chatWidget').classList.toggle('open', chatOpen);
+    document.getElementById('letsTalkIcon').className = chatOpen
+      ? 'fa-solid fa-xmark'
+      : 'fa-solid fa-comment-dots';
+    if (chatOpen && !chatBooted) {
+      chatBooted = true;
+      addBotMsg("Hey there! 👋 I'm Chanuka's AI assistant. Ask me anything about his work, blog, or how to get in touch!");
+    }
+    if (chatOpen) setTimeout(() => document.getElementById('chatInput').focus(), 300);
+  }
+
+  function addBotMsg(text) {
+    document.getElementById('chatMessages').appendChild(makeBubble('bot', text));
+    scrollChat();
+  }
+
+  function makeBubble(role, text) {
+    const div = document.createElement('div');
+    div.className = 'chat-bubble ' + role;
+    div.textContent = text;
+    return div;
+  }
+
+  function showTyping() {
+    const div = document.createElement('div');
+    div.className = 'chat-bubble typing'; div.id = 'typingIndicator';
+    div.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+    document.getElementById('chatMessages').appendChild(div);
+    scrollChat();
+    return div;
+  }
+
+  function scrollChat() {
+    const m = document.getElementById('chatMessages');
+    m.scrollTop = m.scrollHeight;
+  }
+
+  function chatKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+  }
+
+  async function sendChat() {
+    const input = document.getElementById('chatInput');
+    const text  = input.value.trim();
+    if (!text) return;
+
+    document.getElementById('chatMessages').appendChild(makeBubble('user', text));
+    CHAT_HISTORY.push({ role: 'user', content: text });
+    input.value = '';
+    input.style.height = 'auto';
+    scrollChat();
+
+    const sendBtn = document.getElementById('chatSendBtn');
+    sendBtn.disabled = true;
+    const typing = showTyping();
+
+    try {
+      // Call our own server — the Groq API key never leaves the backend
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [
+            { role: 'system', content: SYSTEM_PROMPT },
+            ...CHAT_HISTORY.slice(-10),
+          ],
+        }),
+      });
+
+      const data  = await res.json();
+      const reply = data.choices?.[0]?.message?.content?.trim() || '';
+      typing.remove();
+
+      if (reply) {
+        CHAT_HISTORY.push({ role: 'assistant', content: reply });
+        addBotMsg(reply);
+      } else {
+        addBotMsg("Sorry, I couldn't get a response right now. Please try the contact form!");
+      }
+    } catch {
+      typing.remove();
+      addBotMsg("Hmm, something went wrong. Please try again or use the contact form.");
+    }
+
+    sendBtn.disabled = false;
+    scrollChat();
+  }
+
+  // Auto-resize textarea
+  document.getElementById('chatInput').addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Admin Login — Chanuka Nimsara</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <style>
+    :root {
+      --bg:      #eef1f5;
+      --dark:    #1a1a2e;
+      --accent:  #e8154a;
+      --white:   #ffffff;
+      --muted:   #6b7280;
+      --fd: 'DM Serif Display', serif;
+      --fb: 'Outfit', sans-serif;
+      --ease: 0.3s cubic-bezier(.4,0,.2,1);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--fb);
+      background: var(--bg);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Animated blobs */
+    body::before, body::after {
+      content: '';
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::before {
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(232,21,74,.08) 0%, transparent 70%);
+      top: -200px; right: -200px;
+      animation: float1 8s ease-in-out infinite;
+    }
+    body::after {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(26,26,46,.06) 0%, transparent 70%);
+      bottom: -150px; left: -150px;
+      animation: float2 10s ease-in-out infinite;
+    }
+    @keyframes float1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-30px,30px)} }
+    @keyframes float2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(20px,-20px)} }
+
+    /* Card */
+    .card {
+      position: relative; z-index: 1;
+      width: 100%; max-width: 440px;
+      background: var(--white);
+      border-radius: 24px;
+      box-shadow: 0 24px 64px rgba(26,26,46,.12), 0 4px 16px rgba(26,26,46,.06);
+      overflow: hidden;
+      animation: slideUp .5s ease both;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    /* Card header */
+    .card-header {
+      background: var(--dark);
+      padding: 36px 40px 52px;
+      text-align: center;
+      position: relative;
+    }
+    .card-header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px; left: 0; right: 0;
+      height: 52px;
+      background: var(--white);
+      border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+    }
+    .brand {
+      font-family: var(--fd);
+      font-size: 24px;
+      color: var(--white);
+      letter-spacing: 2px;
+      margin-bottom: 6px;
+    }
+    .brand-sub {
+      font-size: 12px;
+      color: rgba(255,255,255,.4);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+    .lock-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 56px; height: 56px;
+      background: rgba(232,21,74,.15);
+      border-radius: 50%;
+      font-size: 22px;
+      color: var(--accent);
+      margin-bottom: 16px;
+      border: 2px solid rgba(232,21,74,.25);
+    }
+
+    /* Card body */
+    .card-body { padding: 8px 40px 40px; }
+
+    .card-title {
+      font-family: var(--fd);
+      font-size: 22px;
+      color: var(--dark);
+      margin-bottom: 6px;
+      text-align: center;
+    }
+    .card-sub {
+      font-size: 13.5px;
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    /* Form fields */
+    .field { margin-bottom: 20px; }
+    .field label {
+      display: block;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--dark);
+      margin-bottom: 8px;
+      letter-spacing: .3px;
+    }
+    .input-wrap {
+      position: relative;
+    }
+    .input-wrap > i {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 15px;
+      pointer-events: none;
+      transition: color var(--ease);
+    }
+    .input-wrap input {
+      width: 100%;
+      padding: 13px 16px 13px 44px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 12px;
+      font-family: var(--fb);
+      font-size: 14px;
+      color: var(--dark);
+      background: #f9fafb;
+      outline: none;
+      transition: border-color var(--ease), box-shadow var(--ease), background var(--ease);
+    }
+    .input-wrap input:focus {
+      border-color: var(--dark);
+      background: var(--white);
+      box-shadow: 0 0 0 3px rgba(26,26,46,.07);
+    }
+    .input-wrap input:focus + i,
+    .input-wrap:focus-within > i { color: var(--dark); }
+
+    /* Password toggle */
+    .pw-toggle {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 14px;
+      padding: 4px;
+      transition: color var(--ease);
+      pointer-events: all;
+      z-index: 2;
+    }
+    .pw-toggle:hover { color: var(--dark); }
+
+    /* Give the password input right padding to clear the eye button */
+    #password { padding-right: 44px !important; }
+
+    /* Error message */
+    .error-msg {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: #fde8ee;
+      color: var(--accent);
+      border-radius: 10px;
+      font-size: 13.5px;
+      font-weight: 500;
+      margin-bottom: 20px;
+      border: 1px solid rgba(232,21,74,.2);
+    }
+    .error-msg.show { display: flex; animation: shake .4s ease; }
+    @keyframes shake {
+      0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)}
+    }
+
+    /* Submit button */
+    .btn-login {
+      width: 100%;
+      padding: 14px;
+      background: var(--dark);
+      color: var(--white);
+      border: none;
+      border-radius: 12px;
+      font-family: var(--fb);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: background var(--ease), transform var(--ease), box-shadow var(--ease);
+      margin-top: 8px;
+    }
+    .btn-login:hover:not(:disabled) {
+      background: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(232,21,74,.28);
+    }
+    .btn-login:disabled {
+      opacity: .7;
+      cursor: not-allowed;
+    }
+
+    /* Secure session badge */
+    .secure-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 24px;
+      padding: 10px 18px;
+      background: linear-gradient(135deg, #f0fdf4 0%, #f0f9ff 100%);
+      border: 1px solid rgba(34,197,94,.2);
+      border-radius: 50px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #16a34a;
+      letter-spacing: .3px;
+    }
+    .secure-badge .dot {
+      width: 7px; height: 7px;
+      background: #22c55e;
+      border-radius: 50%;
+      box-shadow: 0 0 0 3px rgba(34,197,94,.2);
+      animation: pulse-dot 2s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+    @keyframes pulse-dot {
+      0%,100% { box-shadow: 0 0 0 3px rgba(34,197,94,.2); }
+      50%      { box-shadow: 0 0 0 6px rgba(34,197,94,.08); }
+    }
+    .secure-badge .lock-sm {
+      font-size: 11px;
+      opacity: .75;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="card-header">
+      <div class="lock-icon"><i class="fa-solid fa-lock"></i></div>
+      <div class="brand">CHANUKA NIMSARA</div>
+      <div class="brand-sub">Admin Portal</div>
+    </div>
+
+    <div class="card-body">
+      <h2 class="card-title">Welcome back</h2>
+      <p class="card-sub">Sign in to manage your subscribers & newsletter</p>
+
+      <div class="error-msg" id="errorMsg">
+        <i class="fa-solid fa-circle-exclamation"></i>
+        <span id="errorText">Invalid username or password.</span>
+      </div>
+
+      <div class="field">
+        <label for="username">Username</label>
+        <div class="input-wrap">
+          <i class="fa-solid fa-user"></i>
+          <input type="text" id="username" placeholder="username" autocomplete="username"/>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <div class="input-wrap">
+          <i class="fa-solid fa-key"></i>
+          <input type="password" id="password" placeholder="••••••••" autocomplete="current-password"/>
+          <button class="pw-toggle" onclick="togglePw()" type="button" id="pwToggle">
+            <i class="fa-regular fa-eye" id="pwIcon"></i>
+          </button>
+        </div>
+      </div>
+
+      <button class="btn-login" id="loginBtn" onclick="doLogin()">
+        <span id="btnText">Sign In</span>
+        <i class="fa-solid fa-arrow-right" id="btnIcon"></i>
+      </button>
+
+      <div class="secure-badge">
+        <span class="dot"></span>
+        <i class="fa-solid fa-shield-halved lock-sm"></i>
+        Encrypted &amp; Secure Session
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Redirect if already logged in
+    if (localStorage.getItem('adminToken')) window.location.href = '/admin.html';
+
+    function togglePw() {
+      const inp  = document.getElementById('password');
+      const icon = document.getElementById('pwIcon');
+      if (inp.type === 'password') {
+        inp.type = 'text';
+        icon.className = 'fa-regular fa-eye-slash';
+      } else {
+        inp.type = 'password';
+        icon.className = 'fa-regular fa-eye';
+      }
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter') doLogin();
+    });
+
+    async function doLogin() {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const errDiv   = document.getElementById('errorMsg');
+      const errText  = document.getElementById('errorText');
+      const btn      = document.getElementById('loginBtn');
+      const btnText  = document.getElementById('btnText');
+      const btnIcon  = document.getElementById('btnIcon');
+
+      errDiv.classList.remove('show');
+
+      if (!username || !password) {
+        errText.textContent = 'Please enter username and password.';
+        errDiv.classList.add('show');
+        return;
+      }
+
+      btn.disabled = true;
+      btnText.textContent = 'Signing in…';
+      btnIcon.className = 'fa-solid fa-spinner fa-spin';
+
+      try {
+        const res  = await fetch('/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          localStorage.setItem('adminToken', data.token);
+          btnText.textContent = 'Redirecting…';
+          btnIcon.className = 'fa-solid fa-check';
+          setTimeout(() => window.location.href = '/admin.html', 500);
+        } else {
+          errText.textContent = data.error || 'Invalid credentials.';
+          errDiv.classList.add('show');
+          btn.disabled = false;
+          btnText.textContent = 'Sign In';
+          btnIcon.className = 'fa-solid fa-arrow-right';
+        }
+      } catch {
+        errText.textContent = 'Network error. Please try again.';
+        errDiv.classList.add('show');
+        btn.disabled = false;
+        btnText.textContent = 'Sign In';
+        btnIcon.className = 'fa-solid fa-arrow-right';
+      }
+    }
+  </script>
+</body>
+</html>
