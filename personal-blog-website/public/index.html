@@ -731,6 +731,8 @@
       .timeline::before { left: 76px; }
       .tl-item { grid-template-columns: 60px 20px 1fr; }
       .f-row { grid-template-columns: 1fr; }
+      .nl-form { flex-direction: column; align-items: stretch; }
+      .nl-form .btn { width: 100%; justify-content: center; border-radius: 50px; }
     }
 
     /* ============================================================
@@ -1598,6 +1600,18 @@ If you want to become kinder and more connected, start with the books that chall
 
   let chatOpen   = false;
   let chatBooted = false;
+  let GROQ_KEY   = null;
+
+  // Fetch the Groq key from the server once (kept server-side in .env)
+  async function loadGroqKey() {
+    if (GROQ_KEY) return GROQ_KEY;
+    try {
+      const r = await fetch('/api/groq-key');
+      const d = await r.json();
+      GROQ_KEY = d.key || null;
+    } catch { GROQ_KEY = null; }
+    return GROQ_KEY;
+  }
 
   function toggleChat() {
     chatOpen = !chatOpen;
@@ -1608,6 +1622,7 @@ If you want to become kinder and more connected, start with the books that chall
     if (chatOpen && !chatBooted) {
       chatBooted = true;
       addBotMsg("Hey there! 👋 I'm Chanuka's AI assistant. Ask me anything about his work, blog, or how to get in touch!");
+      loadGroqKey(); // pre-fetch key silently
     }
     if (chatOpen) setTimeout(() => document.getElementById('chatInput').focus(), 300);
   }
@@ -1658,11 +1673,19 @@ If you want to become kinder and more connected, start with the books that chall
     const typing = showTyping();
 
     try {
-      // Call our own server — the Groq API key never leaves the backend
-      const res = await fetch('/api/chat', {
+      const key = await loadGroqKey();
+      if (!key) throw new Error('no key');
+
+      // Call Groq directly from the browser — no server proxy needed
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': 'Bearer ' + key,
+        },
         body: JSON.stringify({
+          model:      'llama3-8b-8192',
+          max_tokens: 512,
           messages: [
             { role: 'system', content: SYSTEM_PROMPT },
             ...CHAT_HISTORY.slice(-10),
