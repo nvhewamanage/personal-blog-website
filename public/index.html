@@ -731,6 +731,8 @@
       .timeline::before { left: 76px; }
       .tl-item { grid-template-columns: 60px 20px 1fr; }
       .f-row { grid-template-columns: 1fr; }
+      .nl-form { flex-direction: column; align-items: stretch; }
+      .nl-form .btn { width: 100%; justify-content: center; border-radius: 50px; }
     }
 
     /* ============================================================
@@ -854,6 +856,105 @@
       transition: background var(--ease);
     }
     .blog-modal-close:hover { background: rgba(255,255,255,.3); }
+
+    /* ============================================================
+       CHATBOT WIDGET
+       ============================================================ */
+    #chatWidget {
+      position: fixed; bottom: 92px; right: 32px; z-index: 1100;
+      width: 370px; max-height: 560px;
+      background: var(--white); border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(26,26,46,.10);
+      display: flex; flex-direction: column;
+      overflow: hidden; pointer-events: auto;
+      opacity: 0; transform: scale(0.85) translateY(20px);
+      transform-origin: bottom right;
+      transition: opacity 0.28s cubic-bezier(.4,0,.2,1), transform 0.28s cubic-bezier(.4,0,.2,1);
+      visibility: hidden;
+    }
+    #chatWidget.open {
+      opacity: 1; transform: scale(1) translateY(0); visibility: visible;
+    }
+    .chat-header {
+      background: var(--dark); color: #fff;
+      padding: 14px 18px; display: flex; align-items: center; gap: 12px;
+      flex-shrink: 0;
+    }
+    .chat-avatar {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: var(--accent); display: flex; align-items: center; justify-content: center;
+      font-size: 17px; flex-shrink: 0;
+    }
+    .chat-header-info { flex: 1; }
+    .chat-header-name { font-weight: 700; font-size: 14px; }
+    .chat-header-status { font-size: 11px; opacity: .65; display: flex; align-items: center; gap: 5px; }
+    .chat-status-dot { width: 7px; height: 7px; background: #22c55e; border-radius: 50%; display: inline-block; }
+    .chat-close-btn {
+      background: none; border: none; color: #fff; cursor: pointer;
+      font-size: 16px; opacity: .7; padding: 4px; transition: opacity .2s;
+    }
+    .chat-close-btn:hover { opacity: 1; }
+    .chat-messages {
+      flex: 1; overflow-y: auto; padding: 16px;
+      display: flex; flex-direction: column; gap: 10px;
+      min-height: 300px; max-height: 380px;
+      scroll-behavior: smooth;
+    }
+    .chat-messages::-webkit-scrollbar { width: 4px; }
+    .chat-messages::-webkit-scrollbar-track { background: transparent; }
+    .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .chat-bubble {
+      max-width: 82%; padding: 10px 14px; border-radius: 16px;
+      font-size: 13.5px; line-height: 1.55; word-break: break-word;
+    }
+    .chat-bubble.bot {
+      background: var(--bg-alt); color: var(--text);
+      border-bottom-left-radius: 4px; align-self: flex-start;
+    }
+    .chat-bubble.user {
+      background: var(--accent); color: #fff;
+      border-bottom-right-radius: 4px; align-self: flex-end;
+    }
+    .chat-bubble.typing {
+      background: var(--bg-alt); align-self: flex-start;
+      padding: 12px 16px;
+    }
+    .typing-dots { display: flex; gap: 4px; align-items: center; }
+    .typing-dots span {
+      width: 7px; height: 7px; background: var(--muted);
+      border-radius: 50%; animation: typingBounce 1.2s infinite;
+    }
+    .typing-dots span:nth-child(2) { animation-delay: .2s; }
+    .typing-dots span:nth-child(3) { animation-delay: .4s; }
+    @keyframes typingBounce {
+      0%,60%,100% { transform: translateY(0); }
+      30% { transform: translateY(-6px); }
+    }
+    .chat-input-row {
+      padding: 12px 14px; border-top: 1px solid var(--border);
+      display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0;
+      background: var(--white);
+    }
+    #chatInput {
+      flex: 1; border: 1.5px solid var(--border); border-radius: 12px;
+      padding: 9px 13px; font-family: var(--fb); font-size: 13.5px;
+      color: var(--text); background: var(--bg); resize: none;
+      outline: none; max-height: 100px; overflow-y: auto;
+      transition: border-color .2s;
+    }
+    #chatInput:focus { border-color: var(--accent); }
+    #chatSendBtn {
+      width: 38px; height: 38px; border-radius: 50%; border: none;
+      background: var(--accent); color: #fff; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; flex-shrink: 0;
+      transition: background .2s, transform .15s;
+    }
+    #chatSendBtn:hover { background: #c5103d; transform: scale(1.08); }
+    #chatSendBtn:disabled { background: var(--muted); cursor: not-allowed; transform: none; }
+    @media (max-width: 480px) {
+      #chatWidget { width: calc(100vw - 32px); right: 16px; bottom: 80px; }
+    }
   </style>
 </head>
 <body>
@@ -1265,10 +1366,31 @@ If you want to become kinder and more connected, start with the books that chall
 </footer>
 
 <!-- ═══════════════ LETS TALK BUTTON ═══════════════ -->
-<a href="#contact" id="letsTalkBtn" aria-label="Let's Talk">
-  <i class="fa-solid fa-comment-dots"></i>
+<button id="letsTalkBtn" aria-label="Let's Talk" onclick="toggleChat()">
+  <i class="fa-solid fa-comment-dots" id="letsTalkIcon"></i>
   <span class="lbt-label">Let's Talk</span>
-</a>
+</button>
+
+<!-- ═══════════════ CHATBOT WIDGET ═══════════════ -->
+<div id="chatWidget">
+  <div class="chat-header">
+    <div class="chat-avatar"><i class="fa-solid fa-robot"></i></div>
+    <div class="chat-header-info">
+      <div class="chat-header-name">Chanuka's Assistant</div>
+      <div class="chat-header-status"><span class="chat-status-dot"></span> Online</div>
+    </div>
+    <button class="chat-close-btn" onclick="toggleChat()" aria-label="Close chat">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+  </div>
+  <div class="chat-messages" id="chatMessages"></div>
+  <div class="chat-input-row">
+    <textarea id="chatInput" rows="1" placeholder="Ask me anything…" onkeydown="chatKeyDown(event)"></textarea>
+    <button id="chatSendBtn" onclick="sendChat()" aria-label="Send">
+      <i class="fa-solid fa-paper-plane"></i>
+    </button>
+  </div>
+</div>
 
 <!-- ═══════════════ BACK TO TOP ═══════════════ -->
 <button id="backToTop" aria-label="Back to top" onclick="window.scrollTo({top:0,behavior:'smooth'})">
@@ -1468,6 +1590,132 @@ If you want to become kinder and more connected, start with the books that chall
   const backToTop = document.getElementById('backToTop');
   window.addEventListener('scroll', () => {
     backToTop.classList.toggle('visible', window.scrollY > 400);
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     CHATBOT
+  ══════════════════════════════════════════════════════════════ */
+  const CHAT_HISTORY  = [];
+  const SYSTEM_PROMPT = `You are a friendly AI assistant on Chanuka Nimsara's personal website. Chanuka is a blogger, creative professional, and web developer from Sri Lanka. You help visitors learn about Chanuka, his work, blog, gallery, and how to get in touch. Keep replies concise (2-4 sentences), warm, and helpful. If asked something you don't know about Chanuka, suggest they use the contact form.`;
+
+  let chatOpen   = false;
+  let chatBooted = false;
+  let GROQ_KEY   = null;
+
+  // Fetch the Groq key from the server once (kept server-side in .env)
+  async function loadGroqKey() {
+    if (GROQ_KEY) return GROQ_KEY;
+    try {
+      const r = await fetch('/api/groq-key');
+      const d = await r.json();
+      GROQ_KEY = d.key || null;
+    } catch { GROQ_KEY = null; }
+    return GROQ_KEY;
+  }
+
+  function toggleChat() {
+    chatOpen = !chatOpen;
+    document.getElementById('chatWidget').classList.toggle('open', chatOpen);
+    document.getElementById('letsTalkIcon').className = chatOpen
+      ? 'fa-solid fa-xmark'
+      : 'fa-solid fa-comment-dots';
+    if (chatOpen && !chatBooted) {
+      chatBooted = true;
+      addBotMsg("Hey there! 👋 I'm Chanuka's AI assistant. Ask me anything about his work, blog, or how to get in touch!");
+      loadGroqKey(); // pre-fetch key silently
+    }
+    if (chatOpen) setTimeout(() => document.getElementById('chatInput').focus(), 300);
+  }
+
+  function addBotMsg(text) {
+    document.getElementById('chatMessages').appendChild(makeBubble('bot', text));
+    scrollChat();
+  }
+
+  function makeBubble(role, text) {
+    const div = document.createElement('div');
+    div.className = 'chat-bubble ' + role;
+    div.textContent = text;
+    return div;
+  }
+
+  function showTyping() {
+    const div = document.createElement('div');
+    div.className = 'chat-bubble typing'; div.id = 'typingIndicator';
+    div.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+    document.getElementById('chatMessages').appendChild(div);
+    scrollChat();
+    return div;
+  }
+
+  function scrollChat() {
+    const m = document.getElementById('chatMessages');
+    m.scrollTop = m.scrollHeight;
+  }
+
+  function chatKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+  }
+
+  async function sendChat() {
+    const input = document.getElementById('chatInput');
+    const text  = input.value.trim();
+    if (!text) return;
+
+    document.getElementById('chatMessages').appendChild(makeBubble('user', text));
+    CHAT_HISTORY.push({ role: 'user', content: text });
+    input.value = '';
+    input.style.height = 'auto';
+    scrollChat();
+
+    const sendBtn = document.getElementById('chatSendBtn');
+    sendBtn.disabled = true;
+    const typing = showTyping();
+
+    try {
+      const key = await loadGroqKey();
+      if (!key) throw new Error('no key');
+
+      // Call Groq directly from the browser — no server proxy needed
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': 'Bearer ' + key,
+        },
+        body: JSON.stringify({
+          model:      'llama3-8b-8192',
+          max_tokens: 512,
+          messages: [
+            { role: 'system', content: SYSTEM_PROMPT },
+            ...CHAT_HISTORY.slice(-10),
+          ],
+        }),
+      });
+
+      const data  = await res.json();
+      const reply = data.choices?.[0]?.message?.content?.trim() || '';
+      typing.remove();
+
+      if (reply) {
+        CHAT_HISTORY.push({ role: 'assistant', content: reply });
+        addBotMsg(reply);
+      } else {
+        addBotMsg("Sorry, I couldn't get a response right now. Please try the contact form!");
+      }
+    } catch {
+      typing.remove();
+      addBotMsg("Hmm, something went wrong. Please try again or use the contact form.");
+    }
+
+    sendBtn.disabled = false;
+    scrollChat();
+  }
+
+  // Auto-resize textarea
+  document.getElementById('chatInput').addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 100) + 'px';
   });
 </script>
 </body>

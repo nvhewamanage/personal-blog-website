@@ -585,6 +585,44 @@ ${previewText ? `<div style="display:none;max-height:0;overflow:hidden;">${previ
 </body></html>`;
 }
 
+// ─── Chatbot — secure server-side proxy (key never leaves the server) ────────
+app.post('/api/chat', publicLimiter, async (req, res) => {
+  const key = process.env.GROQ_API_KEY || '';
+  if (!key)
+    return res.status(500).json({ error: 'Chatbot not configured. Set GROQ_API_KEY in .env' });
+
+  const { messages } = req.body;
+  if (!Array.isArray(messages) || messages.length === 0)
+    return res.status(400).json({ error: 'messages array is required.' });
+
+  try {
+    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': 'Bearer ' + key,
+      },
+      body: JSON.stringify({
+        model: "llama-3.1-8b-instant",
+        max_tokens: 512,
+        messages,
+      }),
+    });
+
+    if (!groqRes.ok) {
+      const err = await groqRes.text();
+      console.error('Groq API error:', groqRes.status, err);
+      return res.status(502).json({ error: 'AI service error. Please try again.' });
+    }
+
+    const data = await groqRes.json();
+    res.json(data);
+  } catch (err) {
+    console.error('Chat proxy error:', err.message);
+    res.status(500).json({ error: 'Server error. Please try again.' });
+  }
+});
+
 // ─── Start Server ─────────────────────────────────────────────
 initAdminUser()
   .then(() => {
