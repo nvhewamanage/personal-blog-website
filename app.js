@@ -585,6 +585,55 @@ ${previewText ? `<div style="display:none;max-height:0;overflow:hidden;">${previ
 </body></html>`;
 }
 
+// ─── Site Context for Chatbot ─────────────────────────────────────────────────
+// Returns live blog posts, gallery items and author info so the AI can answer
+// questions about real content on the site.
+app.get('/api/site-context', async (req, res) => {
+  try {
+    // Fetch blog posts
+    const postsSnap = await db.collection('blog_posts')
+      .orderBy('date', 'desc')
+      .limit(20)
+      .get();
+
+    const posts = postsSnap.docs.map(doc => {
+      const d = doc.data();
+      return {
+        title:   d.title   || '',
+        tag:     d.tag     || '',
+        date:    d.date    || '',
+        read:    d.read    || '',
+        excerpt: d.excerpt || '',
+        author:  d.author  || 'Chanuka Nimsara',
+      };
+    });
+
+    // Fetch gallery items
+    const gallerySnap = await db.collection('gallery_items')
+      .orderBy('createdAt', 'desc')
+      .limit(30)
+      .get();
+
+    const gallery = gallerySnap.docs.map(doc => {
+      const d = doc.data();
+      return {
+        title:       d.title       || '',
+        category:    d.category    || '',
+        description: d.description || '',
+      };
+    });
+
+    // Fetch author / about info
+    const authorSnap = await db.collection('site_info').doc('author').get();
+    const author = authorSnap.exists ? authorSnap.data() : {};
+
+    res.json({ success: true, posts, gallery, author });
+  } catch (err) {
+    console.error('Site context error:', err.message);
+    res.status(500).json({ success: false, error: 'Failed to load site context.' });
+  }
+});
+
 // ─── Chatbot — secure server-side proxy (key never leaves the server) ────────
 app.post('/api/chat', publicLimiter, async (req, res) => {
   const key = process.env.GROQ_API_KEY || '';
@@ -603,7 +652,7 @@ app.post('/api/chat', publicLimiter, async (req, res) => {
         'Authorization': 'Bearer ' + key,
       },
       body: JSON.stringify({
-        model: "llama-3.1-8b-instant",
+        model:      'llama-3.1-8b-instant',
         max_tokens: 512,
         messages,
       }),
