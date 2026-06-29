@@ -1595,22 +1595,81 @@ If you want to become kinder and more connected, start with the books that chall
   /* ══════════════════════════════════════════════════════════════
      CHATBOT
   ══════════════════════════════════════════════════════════════ */
-  const CHAT_HISTORY  = [];
-  const SYSTEM_PROMPT = `You are a friendly AI assistant on Chanuka Nimsara's personal website. Chanuka is a blogger, creative professional, and web developer from Sri Lanka. You help visitors learn about Chanuka, his work, blog, gallery, and how to get in touch. Keep replies concise (2-4 sentences), warm, and helpful. If asked something you don't know about Chanuka, suggest they use the contact form.`;
+  const CHAT_HISTORY = [];
 
-  let chatOpen   = false;
-  let chatBooted = false;
-  let GROQ_KEY   = null;
+  // Base prompt — real site data gets appended once loaded
+  const BASE_PROMPT = `You are a friendly AI assistant on Chanuka Nimsara's personal website. Chanuka is a blogger, creative professional, and photographer from Sri Lanka. You help visitors learn about Chanuka, his work, blog posts, gallery, and how to get in touch. Keep replies concise (2-4 sentences), warm, and helpful. If asked something you don't know, suggest the contact form.`;
 
-  // Fetch the Groq key from the server once (kept server-side in .env)
-  async function loadGroqKey() {
-    if (GROQ_KEY) return GROQ_KEY;
+  let SYSTEM_PROMPT  = BASE_PROMPT; // updated after site context loads
+  let chatOpen       = false;
+  let chatBooted     = false;
+  let contextLoaded  = false;
+
+  // Fetch live blog posts, gallery items and author info from the server
+  async function loadSiteContext() {
+    if (contextLoaded) return;
     try {
-      const r = await fetch('/api/groq-key');
-      const d = await r.json();
-      GROQ_KEY = d.key || null;
-    } catch { GROQ_KEY = null; }
-    return GROQ_KEY;
+      const res  = await fetch('/api/site-context');
+      const data = await res.json();
+      if (!data.success) return;
+
+      let context = '\n\n--- LIVE SITE DATA (use this to answer questions) ---';
+
+      // Author / about info
+      if (data.author && Object.keys(data.author).length > 0) {
+        const a = data.author;
+        context += `\n\nABOUT CHANUKA:\n`;
+        if (a.name)        context += `Name: ${a.name}\n`;
+        if (a.bio)         context += `Bio: ${a.bio}\n`;
+        if (a.location)    context += `Location: ${a.location}\n`;
+        if (a.skills)      context += `Skills: ${a.skills}\n`;
+        if (a.social)      context += `Social links: ${a.social}\n`;
+      }
+
+      // Blog posts
+      if (data.posts && data.posts.length > 0) {
+        context += `\n\nBLOG POSTS (${data.posts.length} total):\n`;
+        data.posts.forEach((p, i) => {
+          context += `${i + 1}. "${p.title}" — Tag: ${p.tag}, Date: ${p.date}, Read time: ${p.read}, Author: ${p.author}`;
+          if (p.excerpt) context += `, Summary: ${p.excerpt}`;
+          context += '\n';
+        });
+      } else {
+        // Fallback: use the posts already on the page
+        const articles = document.querySelectorAll('article[data-title]');
+        if (articles.length > 0) {
+          context += `\n\nBLOG POSTS (${articles.length} total):\n`;
+          articles.forEach((a, i) => {
+            context += `${i + 1}. "${a.dataset.title}" — Tag: ${a.dataset.tag}, Date: ${a.dataset.date}, Read time: ${a.dataset.read}\n`;
+          });
+        }
+      }
+
+      // Gallery items
+      if (data.gallery && data.gallery.length > 0) {
+        context += `\n\nGALLERY (${data.gallery.length} items):\n`;
+        data.gallery.forEach((g, i) => {
+          context += `${i + 1}. "${g.title}" — Category: ${g.category}`;
+          if (g.description) context += `, Description: ${g.description}`;
+          context += '\n';
+        });
+      } else {
+        // Fallback: use gallery items already on the page
+        const items = document.querySelectorAll('.g-item[data-title]');
+        if (items.length > 0) {
+          context += `\n\nGALLERY (${items.length} items):\n`;
+          items.forEach((g, i) => {
+            context += `${i + 1}. "${g.dataset.title}" — Category: ${g.dataset.cat}\n`;
+          });
+        }
+      }
+
+      context += '\n--- END OF SITE DATA ---';
+      SYSTEM_PROMPT = BASE_PROMPT + context;
+      contextLoaded = true;
+    } catch {
+      // silently fall back to base prompt
+    }
   }
 
   function toggleChat() {
@@ -1621,8 +1680,8 @@ If you want to become kinder and more connected, start with the books that chall
       : 'fa-solid fa-comment-dots';
     if (chatOpen && !chatBooted) {
       chatBooted = true;
-      addBotMsg("Hey there! 👋 I'm Chanuka's AI assistant. Ask me anything about his work, blog, or how to get in touch!");
-      loadGroqKey(); // pre-fetch key silently
+      addBotMsg("Hey there! 👋 I'm Chanuka's AI assistant. Ask me anything about his blog posts, gallery, or how to get in touch!");
+      loadSiteContext(); // pre-fetch live data silently in the background
     }
     if (chatOpen) setTimeout(() => document.getElementById('chatInput').focus(), 300);
   }
@@ -1673,19 +1732,11 @@ If you want to become kinder and more connected, start with the books that chall
     const typing = showTyping();
 
     try {
-      const key = await loadGroqKey();
-      if (!key) throw new Error('no key');
-
-      // Call Groq directly from the browser — no server proxy needed
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      // Use the secure server-side proxy — key never leaves the server
+      const res = await fetch('/api/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type':  'application/json',
-          'Authorization': 'Bearer ' + key,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model:      'llama3-8b-8192',
-          max_tokens: 512,
           messages: [
             { role: 'system', content: SYSTEM_PROMPT },
             ...CHAT_HISTORY.slice(-10),
