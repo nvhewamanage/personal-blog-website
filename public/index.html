@@ -337,36 +337,36 @@
       position: relative;
       display: flex;
       justify-content: center;
-      align-items: flex-end;
+      align-items: center;
       min-height: 500px;
+      max-width: 420px;
+      aspect-ratio: 4 / 5;
+      margin: 0 auto;
+      border-radius: 40px;
+      overflow: hidden;
+      background: radial-gradient(circle at top, var(--accent-l) 0%, var(--bg-alt) 55%, var(--bg) 100%);
+      box-shadow: var(--shadow);
       animation: fadeIn 1s .3s ease both;
-    }
-    .brush {
-      position: absolute;
-      bottom: 0; right: 0;
-      width: 88%; height: 80%;
-      background: linear-gradient(135deg, rgba(200,210,220,.35), rgba(180,195,210,.15));
-      border-radius: 60% 40% 60% 40% / 40% 60% 40% 60%;
-      transform: rotate(-8deg);
-      z-index: 0;
     }
     .hero-photo {
       position: relative;
       z-index: 1;
-      max-height: 500px;
-      width: auto;
+      width: 100%;
+      height: 100%;
       object-fit: contain;
-      filter: drop-shadow(0 20px 40px rgba(26,26,46,.13));
+      object-position: center bottom;
+      filter: drop-shadow(0 20px 30px rgba(26,26,46,.18));
     }
     .scroll-hint {
       position: absolute;
-      bottom: -40px;
+      bottom: 14px;
       left: 50%;
       transform: translateX(-50%);
       color: var(--muted);
       font-size: 14px;
       cursor: pointer;
       animation: bounce 2s infinite;
+      z-index: 2;
     }
     @keyframes bounce {
       0%,100% { transform: translateX(-50%) translateY(0); }
@@ -393,24 +393,24 @@
     .about-img-wrap {
       position: relative;
       height: 500px;
+      max-width: 420px;
+      margin: 0 auto;
       display: flex;
       justify-content: center;
-      align-items: flex-end;
-    }
-    .about-brush {
-      position: absolute;
-      bottom: 0; right: 0;
-      width: 90%; height: 85%;
-      background: linear-gradient(135deg, rgba(232,21,74,.08), rgba(200,210,220,.25));
-      border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
-      transform: rotate(-5deg);
+      align-items: center;
+      border-radius: 40px;
+      overflow: hidden;
+      background: radial-gradient(circle at top, var(--accent-l) 0%, var(--bg-alt) 55%, var(--bg) 100%);
+      box-shadow: var(--shadow);
     }
     .about-photo {
       position: relative;
       z-index: 1;
-      max-height: 460px;
+      width: 100%;
+      height: 100%;
       object-fit: contain;
-      filter: drop-shadow(0 16px 32px rgba(26,26,46,.1));
+      object-position: center bottom;
+      filter: drop-shadow(0 16px 24px rgba(26,26,46,.15));
     }
     .about-col { flex: 1; }
     .about-bio { font-size: 15px; line-height: 1.85; color: var(--muted); margin-bottom: 18px; }
@@ -713,15 +713,16 @@
       #home {
         flex-direction: column-reverse; justify-content: center;
         text-align: center; gap: 30px;
-        min-height: auto; padding-top: calc(var(--nav-h) + 24px);
+        min-height: auto; padding-top: calc(var(--nav-h) + 36px);
       }
-      .hero-img-wrap { min-height: 240px; width: 100%; }
-      .hero-photo { max-height: 240px; }
+      .hero-greeting { margin-top: 10px; }
+      .hero-img-wrap { width: 70%; max-width: 260px; min-height: 0; margin: 0 auto; }
       .hero-desc { margin: 0 auto 28px; }
       .social-widget { width: 100%; }
       .sw-links { justify-content: center; }
       #about { flex-direction: column; gap: 36px; }
-      .about-img-wrap { height: 280px; }
+      .about-img-col { flex: 0 0 auto; width: 100%; }
+      .about-img-wrap { width: 70%; max-width: 260px; height: auto; aspect-ratio: 4 / 5; margin: 0 auto; }
       .g-grid { grid-template-columns: repeat(2, 1fr); }
       .g-item--wide { grid-column: span 1; }
       .blog-grid { grid-template-columns: 1fr; }
@@ -997,8 +998,7 @@
     </div>
   </div>
   <div class="hero-img-wrap">
-    <div class="brush"></div>
-    <img src="/images/profile.png" alt="Chanuka Nimsara" class="hero-photo"/>
+    <img src="/images/profile-nobg.png" alt="Chanuka Nimsara" class="hero-photo"/>
     <div class="scroll-hint" onclick="document.getElementById('about').scrollIntoView({behavior:'smooth'})">
       <i class="fa-solid fa-chevron-down"></i>
     </div>
@@ -1009,8 +1009,7 @@
 <section id="about">
   <div class="about-img-col reveal">
     <div class="about-img-wrap">
-      <div class="about-brush"></div>
-      <img src="/images/profile.png" alt="Chanuka Nimsara" class="about-photo"/>
+      <img src="/images/profile1-nobg.png" alt="Chanuka Nimsara" class="about-photo"/>
     </div>
   </div>
   <div class="about-col">
@@ -1026,9 +1025,9 @@
       in the kitchen, or deep in a good book. This website is where I document the journey.
     </p>
     <div class="about-facts reveal">
-      <div class="fact"><span class="fact-n">0+</span><span class="fact-l">Years journaling</span></div>
-      <div class="fact"><span class="fact-n">0</span><span class="fact-l">Blog posts written</span></div>
-      <div class="fact"><span class="fact-n">0</span><span class="fact-l">Countries visited</span></div>
+      <div class="fact"><span class="fact-n">0+</span><span class="fact-l">Gallery Collections</span></div>
+      <div class="fact"><span class="fact-n">0+</span><span class="fact-l">Blog posts written</span></div>
+      <div class="fact"><span class="fact-n">0+</span><span class="fact-l">Places Visited</span></div>
     </div>
     <a href="#contact" class="btn reveal">Get In Touch</a>
   </div>
@@ -1362,7 +1361,7 @@ If you want to become kinder and more connected, start with the books that chall
 
 <!-- ═══════════════ FOOTER ═══════════════ -->
 <footer>
-  © 2026 <span>Chanuka Nimsara</span>. Made with ♥ and a lot of coffee.
+  Copyright© 2026 <span>Chanuka Nimsara</span> - All Rights Reserved.
 </footer>
 
 <!-- ═══════════════ LETS TALK BUTTON ═══════════════ -->
