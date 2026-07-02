@@ -196,13 +196,88 @@ app.patch('/admin/contacts/:id/read', authMiddleware, async (req, res) => {
 });
 
 // ─── Delete Contact Message ────────────────────────────────────
+// Archives into 'removed_contacts' first so deleted messages are never silently lost.
 app.delete('/admin/contacts/:id', authMiddleware, async (req, res) => {
   try {
-    await db.collection('contacts').doc(req.params.id).delete();
+    const docRef = db.collection('contacts').doc(req.params.id);
+    const doc = await docRef.get();
+    if (!doc.exists)
+      return res.status(404).json({ success: false, error: 'Message not found.' });
+
+    const data = doc.data();
+    await db.collection('removed_contacts').add({
+      name:        data.name,
+      email:       data.email,
+      subject:     data.subject,
+      message:     data.message,
+      read:        data.read || false,
+      received_at: data.received_at || null,
+      removedAt:   admin.firestore.FieldValue.serverTimestamp(),
+      removedBy:   req.admin?.username || 'admin',
+      originalId:  doc.id,
+    });
+
+    await docRef.delete();
     res.json({ success: true });
   } catch (err) {
     console.error('Delete contact error:', err.message);
     res.status(500).json({ success: false, error: 'Failed to delete.' });
+  }
+});
+
+// ─── Get Removed Messages (admin) ─────────────────────────────
+app.get('/admin/removed-contacts', authMiddleware, async (req, res) => {
+  try {
+    const snap = await db.collection('removed_contacts')
+      .orderBy('removedAt', 'desc')
+      .get();
+    const removedContacts = snap.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      received_at: doc.data().received_at?.toDate ? doc.data().received_at.toDate().toISOString() : null,
+      removed_at:  doc.data().removedAt?.toDate ? doc.data().removedAt.toDate().toISOString() : new Date().toISOString(),
+    }));
+    res.json({ success: true, removedContacts, total: removedContacts.length });
+  } catch (err) {
+    console.error('Get removed contacts error:', err.message);
+    res.status(500).json({ success: false, error: 'Failed to fetch removed messages.' });
+  }
+});
+
+// ─── Restore Removed Message (admin) ──────────────────────────
+app.post('/admin/removed-contacts/:id/restore', authMiddleware, async (req, res) => {
+  try {
+    const docRef = db.collection('removed_contacts').doc(req.params.id);
+    const doc = await docRef.get();
+    if (!doc.exists)
+      return res.status(404).json({ success: false, error: 'Removed message not found.' });
+
+    const data = doc.data();
+    await db.collection('contacts').add({
+      name:        data.name,
+      email:       data.email,
+      subject:     data.subject,
+      message:     data.message,
+      read:        data.read || false,
+      received_at: data.received_at || admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    await docRef.delete();
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Restore contact error:', err.message);
+    res.status(500).json({ success: false, error: 'Restore failed.' });
+  }
+});
+
+// ─── Permanently Delete Removed Message (admin) ───────────────
+app.delete('/admin/removed-contacts/:id', authMiddleware, async (req, res) => {
+  try {
+    await db.collection('removed_contacts').doc(req.params.id).delete();
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Permanent delete error:', err.message);
+    res.status(500).json({ success: false, error: 'Delete failed.' });
   }
 });
 
@@ -328,13 +403,92 @@ app.get('/admin/subscribers', authMiddleware, async (req, res) => {
   }
 });
 
-// Delete subscriber by Firestore document ID
+// Delete subscriber by Firestore document ID — archives them into
+// 'removed_subscribers' first so removed users are never silently lost.
 app.delete('/admin/subscribers/:id', authMiddleware, async (req, res) => {
   try {
-    await db.collection('subscribers').doc(req.params.id).delete();
+    const docRef = db.collection('subscribers').doc(req.params.id);
+    const doc = await docRef.get();
+    if (!doc.exists)
+      return res.status(404).json({ success: false, error: 'Subscriber not found.' });
+
+    const data = doc.data();
+    await db.collection('removed_subscribers').add({
+      email:          data.email,
+      subscribedAt:   data.subscribedAt || null,
+      removedAt:      admin.firestore.FieldValue.serverTimestamp(),
+      removedBy:      req.admin?.username || 'admin',
+      originalId:     doc.id,
+    });
+
+    await docRef.delete();
     res.json({ success: true });
   } catch (err) {
     console.error('Delete error:', err.message);
+    res.status(500).json({ success: false, error: 'Delete failed.' });
+  }
+});
+
+// Get all removed subscribers
+app.get('/admin/removed-subscribers', authMiddleware, async (req, res) => {
+  try {
+    const snapshot = await db.collection('removed_subscribers')
+      .orderBy('removedAt', 'desc')
+      .get();
+
+    const removedSubscribers = snapshot.docs.map(doc => ({
+      id:            doc.id,
+      email:         doc.data().email,
+      subscribed_at: doc.data().subscribedAt ? doc.data().subscribedAt.toDate().toISOString() : null,
+      removed_at:    doc.data().removedAt ? doc.data().removedAt.toDate().toISOString() : new Date().toISOString(),
+      removed_by:    doc.data().removedBy || 'admin',
+    }));
+
+    res.json({ success: true, total: removedSubscribers.length, removedSubscribers });
+  } catch (err) {
+    console.error('Get removed subscribers error:', err.message);
+    res.status(500).json({ success: false, error: 'Failed to fetch removed subscribers.' });
+  }
+});
+
+// Restore a removed subscriber back into 'subscribers'
+app.post('/admin/removed-subscribers/:id/restore', authMiddleware, async (req, res) => {
+  try {
+    const docRef = db.collection('removed_subscribers').doc(req.params.id);
+    const doc = await docRef.get();
+    if (!doc.exists)
+      return res.status(404).json({ success: false, error: 'Removed subscriber not found.' });
+
+    const data = doc.data();
+
+    // Don't restore a duplicate if this email already re-subscribed on its own.
+    const existing = await db.collection('subscribers')
+      .where('email', '==', data.email)
+      .limit(1)
+      .get();
+
+    if (existing.empty) {
+      await db.collection('subscribers').add({
+        email:        data.email,
+        subscribedAt: data.subscribedAt || admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+
+    await docRef.delete();
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Restore subscriber error:', err.message);
+    res.status(500).json({ success: false, error: 'Restore failed.' });
+  }
+});
+
+// Permanently delete a removed subscriber record
+app.delete('/admin/removed-subscribers/:id', authMiddleware, async (req, res) => {
+  try {
+    await db.collection('removed_subscribers').doc(req.params.id).delete();
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Permanent delete error:', err.message);
     res.status(500).json({ success: false, error: 'Delete failed.' });
   }
 });
