@@ -390,6 +390,44 @@
     .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: .5px; }
     .badge-green { background: var(--green-l); color: #166534; }
     [data-theme="dark"] .badge-green { color: #4ade80; }
+    .badge-gray   { background: #e5e7eb; color: #4b5563; }
+    .badge-blue   { background: #dbeafe; color: #1d4ed8; }
+    .badge-amber  { background: #fef3c7; color: #92400e; }
+    [data-theme="dark"] .badge-gray  { background: #374151; color: #d1d5db; }
+    [data-theme="dark"] .badge-blue  { background: #1e3a5f; color: #93c5fd; }
+    [data-theme="dark"] .badge-amber { background: #4a3510; color: #fcd34d; }
+    .tag-chip {
+      display: inline-block; padding: 2px 9px; border-radius: 20px;
+      font-size: 11px; font-weight: 600; background: var(--accent-l); color: var(--accent);
+      margin: 1px 3px 1px 0;
+    }
+    .post-thumb-cell { width: 56px; height: 56px; border-radius: 10px; overflow: hidden; background: var(--bg2); flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .post-thumb-cell img { width: 100%; height: 100%; object-fit: cover; }
+    .post-thumb-cell i { font-size: 18px; color: var(--muted); }
+    .img-upload-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+    .img-upload-item { position: relative; width: 84px; height: 84px; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+    .img-upload-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .img-upload-item .rm-btn {
+      position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; border-radius: 50%;
+      background: rgba(0,0,0,.55); color: #fff; border: none; font-size: 11px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .img-upload-item .rm-btn:hover { background: var(--accent); }
+    .upload-drop {
+      border: 2px dashed var(--border); border-radius: 12px; padding: 20px; text-align: center;
+      color: var(--muted); font-size: 13px; cursor: pointer; transition: border-color var(--ease), background var(--ease);
+    }
+    .upload-drop:hover { border-color: var(--accent); background: var(--accent-l); }
+    .schedule-row { display: none; }
+    .schedule-row.show { display: block; }
+    .status-radio-group { display: flex; gap: 8px; flex-wrap: wrap; }
+    .status-radio {
+      flex: 1; min-width: 100px; padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--border);
+      cursor: pointer; text-align: center; font-size: 12.5px; font-weight: 600; color: var(--muted);
+      transition: all var(--ease);
+    }
+    .status-radio input { display: none; }
+    .status-radio.checked { border-color: var(--accent); background: var(--accent-l); color: var(--accent); }
 
     /* ── Sidebar collapse ─────────────────────────────────────── */
     body.sb-collapsed .sidebar { transform: translateX(-100%); }
@@ -455,6 +493,20 @@
   <nav class="sb-nav">
     <button class="sb-link active" data-page="overview" onclick="switchPage('overview',this)">
       <i class="fa-solid fa-gauge-high"></i> Overview
+    </button>
+
+    <div class="sb-sep"></div>
+
+    <!-- Photo Posts module — separate from Blog Posts, per the site's content model -->
+    <button class="sb-link" data-page="photo-posts" onclick="switchPage('photo-posts',this)">
+      <i class="fa-solid fa-images"></i> Photo Posts
+    </button>
+    <!-- Blog Posts module -->
+    <button class="sb-link" data-page="blog-posts" onclick="switchPage('blog-posts',this)">
+      <i class="fa-solid fa-newspaper"></i> Blog Posts
+    </button>
+    <button class="sb-link" data-page="activity-log" onclick="switchPage('activity-log',this)">
+      <i class="fa-solid fa-clock-rotate-left"></i> Activity Log
     </button>
 
     <div class="sb-sep"></div>
@@ -587,6 +639,270 @@
             <thead><tr><th>#</th><th>Email Address</th><th>Joined</th><th>Status</th></tr></thead>
             <tbody id="recentTable">
               <tr class="empty-row"><td colspan="4"><div class="empty-icon">📭</div><div>No subscribers yet.</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: PHOTO POSTS ═══ -->
+    <div class="page" id="page-photo-posts">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><i class="fa-solid fa-images"></i> Photo Posts</div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <input type="text" class="search-input" placeholder="Search title, category, tags…" id="ppSearchInput" oninput="renderPhotoPostsTable()"/>
+            <select id="ppStatusFilter" onchange="renderPhotoPostsTable()" style="padding:9px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:13px;">
+              <option value="">All statuses</option>
+              <option value="draft">Draft</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="published">Published</option>
+            </select>
+            <button class="btn" style="padding:8px 18px;font-size:13px;" onclick="openPhotoPostModal()">
+              <i class="fa-solid fa-plus"></i> New Photo Post
+            </button>
+          </div>
+        </div>
+        <p style="padding:0 24px 4px;font-size:12.5px;color:var(--muted);">
+          Published posts appear on your live gallery, newest first. Only the most recent 20 published posts show on the site — older ones stay saved here.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th></th><th>Title</th><th>Category</th><th>Tags</th><th>Status</th><th>Views</th><th>Created</th><th>Action</th></tr></thead>
+            <tbody id="photoPostsTable">
+              <tr class="empty-row"><td colspan="8"><div class="empty-icon">🖼️</div><div>Loading…</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Photo Post Create/Edit Modal ──────────────────────── -->
+    <div id="photoPostModal" class="confirm-overlay" style="display:none;" onclick="if(event.target===this)closePhotoPostModal()">
+      <div class="confirm-box" style="max-width:640px;width:95%;max-height:90vh;overflow-y:auto;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+          <h3 style="margin:0;font-size:17px;display:flex;align-items:center;gap:10px;" id="ppModalTitle">
+            <i class="fa-solid fa-image" style="color:var(--accent);"></i> New Photo Post
+          </h3>
+          <button onclick="closePhotoPostModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);padding:4px;">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+        <div class="nl-form">
+          <input type="hidden" id="ppId">
+          <div class="fg">
+            <label class="fl">Title <span style="color:var(--accent);">*</span></label>
+            <input type="text" id="ppTitle" placeholder="Mountain Trails">
+          </div>
+          <div class="form-row">
+            <div class="fg">
+              <label class="fl">Category <span style="color:var(--accent);">*</span></label>
+              <select id="ppCategory">
+                <option>Travel</option><option>Nature</option><option>Portrait</option><option>Urban</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label class="fl">Card Layout</label>
+              <select id="ppLayout">
+                <option value="normal">Normal</option>
+                <option value="tall">Tall</option>
+                <option value="wide">Wide</option>
+              </select>
+            </div>
+          </div>
+          <div class="fg">
+            <label class="fl">Tags <span style="font-weight:400;color:var(--muted);">(comma-separated)</span></label>
+            <input type="text" id="ppTags" placeholder="sunset, hiking, mountains">
+          </div>
+          <div class="fg">
+            <label class="fl">Description <span style="font-weight:400;color:var(--muted);">(used for search &amp; the site chatbot, not shown publicly)</span></label>
+            <textarea id="ppDescription" rows="2" placeholder="Short internal description…"></textarea>
+          </div>
+          <div class="fg">
+            <label class="fl">Pinterest URL</label>
+            <input type="url" id="ppPinterest" placeholder="https://www.pinterest.com/pin/…">
+          </div>
+          <div class="fg">
+            <label class="fl">Photos <span style="color:var(--accent);">*</span> <span style="font-weight:400;color:var(--muted);">(up to 10 — first image is the cover)</span></label>
+            <div class="upload-drop" onclick="document.getElementById('ppFileInput').click()">
+              <i class="fa-solid fa-cloud-arrow-up" style="font-size:20px;display:block;margin-bottom:6px;"></i>
+              Click to choose images, or drop them here
+            </div>
+            <input type="file" id="ppFileInput" accept="image/*" multiple style="display:none;" onchange="handlePpFilesSelected(this.files)">
+            <div class="img-upload-grid" id="ppImagePreview"></div>
+          </div>
+          <div class="fg">
+            <label class="fl">Status</label>
+            <div class="status-radio-group" id="ppStatusGroup">
+              <label class="status-radio checked" data-val="draft"><input type="radio" name="ppStatus" value="draft" checked> Draft</label>
+              <label class="status-radio" data-val="scheduled"><input type="radio" name="ppStatus" value="scheduled"> Scheduled</label>
+              <label class="status-radio" data-val="published"><input type="radio" name="ppStatus" value="published"> Published</label>
+            </div>
+          </div>
+          <div class="fg schedule-row" id="ppScheduleRow">
+            <label class="fl">Publish On</label>
+            <input type="datetime-local" id="ppPublishAt">
+          </div>
+          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px;">
+            <button class="btn btn-outline" onclick="closePhotoPostModal()">Cancel</button>
+            <button class="btn" id="ppSaveBtn" onclick="savePhotoPost()" style="background:var(--accent);color:#fff;">
+              <i class="fa-solid fa-floppy-disk"></i> Save Photo Post
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Delete Photo Post Confirm ─────────────────────────── -->
+    <div id="deletePpOverlay" class="confirm-overlay" style="display:none;">
+      <div class="confirm-box" style="max-width:420px;width:95%;text-align:center;">
+        <div style="font-size:40px;margin-bottom:12px;">🗑️</div>
+        <h3 style="margin:0 0 8px;">Delete This Photo Post?</h3>
+        <p style="color:var(--muted);font-size:14px;margin-bottom:20px;" id="deletePpMsg">This permanently removes the post and its images. This cannot be undone.</p>
+        <div style="display:flex;gap:10px;justify-content:center;">
+          <button class="btn btn-outline" onclick="closeDeletePpOverlay()">Cancel</button>
+          <button class="btn" id="confirmDeletePpBtn" style="background:var(--accent);color:#fff;" onclick="doDeletePhotoPost()">
+            <i class="fa-solid fa-trash"></i> Delete Forever
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: BLOG POSTS ═══ -->
+    <div class="page" id="page-blog-posts">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><i class="fa-solid fa-newspaper"></i> Blog Posts</div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <input type="text" class="search-input" placeholder="Search title, tag, tags…" id="bpSearchInput" oninput="renderBlogPostsTable()"/>
+            <select id="bpStatusFilter" onchange="renderBlogPostsTable()" style="padding:9px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:13px;">
+              <option value="">All statuses</option>
+              <option value="draft">Draft</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="published">Published</option>
+            </select>
+            <button class="btn" style="padding:8px 18px;font-size:13px;" onclick="openBlogPostModal()">
+              <i class="fa-solid fa-plus"></i> New Blog Post
+            </button>
+          </div>
+        </div>
+        <p style="padding:0 24px 4px;font-size:12.5px;color:var(--muted);">
+          Published posts appear on your live blog, newest first — the very latest gets the large featured card. Only the most recent 20 published posts show on the site — older ones stay saved here.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th></th><th>Title</th><th>Tag</th><th>Tags</th><th>Status</th><th>Views</th><th>Created</th><th>Action</th></tr></thead>
+            <tbody id="blogPostsTable">
+              <tr class="empty-row"><td colspan="8"><div class="empty-icon">📰</div><div>Loading…</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Blog Post Create/Edit Modal ───────────────────────── -->
+    <div id="blogPostModal" class="confirm-overlay" style="display:none;" onclick="if(event.target===this)closeBlogPostModal()">
+      <div class="confirm-box" style="max-width:680px;width:95%;max-height:90vh;overflow-y:auto;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+          <h3 style="margin:0;font-size:17px;display:flex;align-items:center;gap:10px;" id="bpModalTitle">
+            <i class="fa-solid fa-pen-nib" style="color:var(--accent);"></i> New Blog Post
+          </h3>
+          <button onclick="closeBlogPostModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);padding:4px;">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+        <div class="nl-form">
+          <input type="hidden" id="bpId">
+          <div class="fg">
+            <label class="fl">Title <span style="color:var(--accent);">*</span></label>
+            <input type="text" id="bpTitle" placeholder="The Art of Slowing Down in a Fast World">
+          </div>
+          <div class="form-row">
+            <div class="fg">
+              <label class="fl">Category / Tag <span style="color:var(--accent);">*</span></label>
+              <input type="text" id="bpTag" placeholder="Life, Photography, Travel…">
+            </div>
+            <div class="fg">
+              <label class="fl">Additional Tags <span style="font-weight:400;color:var(--muted);">(comma-separated)</span></label>
+              <input type="text" id="bpTags" placeholder="mindfulness, slow-living">
+            </div>
+          </div>
+          <div class="fg">
+            <label class="fl">Excerpt <span style="font-weight:400;color:var(--muted);">(optional — auto-generated from content if left blank)</span></label>
+            <textarea id="bpExcerpt" rows="2" placeholder="A short teaser shown on the blog card…"></textarea>
+          </div>
+          <div class="fg">
+            <label class="fl">Content <span style="color:var(--accent);">*</span> <span style="font-weight:400;color:var(--muted);">(separate paragraphs with a blank line)</span></label>
+            <textarea id="bpContent" rows="9" placeholder="Write your post here…"></textarea>
+          </div>
+          <div class="fg">
+            <label class="fl">Cover Image <span style="font-weight:400;color:var(--muted);">(optional — falls back to a themed icon card if left blank)</span></label>
+            <div class="upload-drop" onclick="document.getElementById('bpFileInput').click()">
+              <i class="fa-solid fa-cloud-arrow-up" style="font-size:20px;display:block;margin-bottom:6px;"></i>
+              Click to choose a cover image
+            </div>
+            <input type="file" id="bpFileInput" accept="image/*" style="display:none;" onchange="handleBpFileSelected(this.files)">
+            <div class="img-upload-grid" id="bpImagePreview"></div>
+          </div>
+          <div class="fg">
+            <label class="fl">Status</label>
+            <div class="status-radio-group" id="bpStatusGroup">
+              <label class="status-radio checked" data-val="draft"><input type="radio" name="bpStatus" value="draft" checked> Draft</label>
+              <label class="status-radio" data-val="scheduled"><input type="radio" name="bpStatus" value="scheduled"> Scheduled</label>
+              <label class="status-radio" data-val="published"><input type="radio" name="bpStatus" value="published"> Published</label>
+            </div>
+          </div>
+          <div class="fg schedule-row" id="bpScheduleRow">
+            <label class="fl">Publish On</label>
+            <input type="datetime-local" id="bpPublishAt">
+          </div>
+          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px;">
+            <button class="btn btn-outline" onclick="closeBlogPostModal()">Cancel</button>
+            <button class="btn" id="bpSaveBtn" onclick="saveBlogPost()" style="background:var(--accent);color:#fff;">
+              <i class="fa-solid fa-floppy-disk"></i> Save Blog Post
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Delete Blog Post Confirm ──────────────────────────── -->
+    <div id="deleteBpOverlay" class="confirm-overlay" style="display:none;">
+      <div class="confirm-box" style="max-width:420px;width:95%;text-align:center;">
+        <div style="font-size:40px;margin-bottom:12px;">🗑️</div>
+        <h3 style="margin:0 0 8px;">Delete This Blog Post?</h3>
+        <p style="color:var(--muted);font-size:14px;margin-bottom:20px;" id="deleteBpMsg">This permanently removes the post and its cover image. This cannot be undone.</p>
+        <div style="display:flex;gap:10px;justify-content:center;">
+          <button class="btn btn-outline" onclick="closeDeleteBpOverlay()">Cancel</button>
+          <button class="btn" id="confirmDeleteBpBtn" style="background:var(--accent);color:#fff;" onclick="doDeleteBlogPost()">
+            <i class="fa-solid fa-trash"></i> Delete Forever
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: ACTIVITY LOG ═══ -->
+    <div class="page" id="page-activity-log">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><i class="fa-solid fa-clock-rotate-left"></i> Activity Log</div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <select id="alEntityFilter" onchange="renderActivityLogTable()" style="padding:9px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:13px;">
+              <option value="">All content</option>
+              <option value="gallery_item">Photo Posts</option>
+              <option value="blog_post">Blog Posts</option>
+            </select>
+            <button class="btn btn-outline" style="padding:8px 16px;font-size:13px;" onclick="loadActivityLog();showToast('Refreshed!','success');">
+              <i class="fa-solid fa-rotate-right"></i> Refresh
+            </button>
+          </div>
+        </div>
+        <p style="padding:0 24px 4px;font-size:12.5px;color:var(--muted);">Every create, edit, delete, and scheduled publish across both modules — who did it, and when.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Content</th><th>Title</th><th>Details</th></tr></thead>
+            <tbody id="activityLogTable">
+              <tr class="empty-row"><td colspan="6"><div class="empty-icon">🕒</div><div>Loading…</div></td></tr>
             </tbody>
           </table>
         </div>
@@ -1067,7 +1383,7 @@
   setInterval(updateClock, 1000);     // then every second
 
   // ── Page switching ────────────────────────────────────────────
-  const pageTitles = { overview: 'Overview', subscribers: 'Subscribers', 'removed-subscribers': 'Removed Subscribers', contacts: 'Contact Messages', 'removed-messages': 'Removed Messages', newsletter: 'Send Newsletter' };
+  const pageTitles = { overview: 'Overview', 'photo-posts': 'Photo Posts', 'blog-posts': 'Blog Posts', 'activity-log': 'Activity Log', subscribers: 'Subscribers', 'removed-subscribers': 'Removed Subscribers', contacts: 'Contact Messages', 'removed-messages': 'Removed Messages', newsletter: 'Send Newsletter' };
 
   function switchPage(name, el) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -1081,6 +1397,8 @@
       closeSidebarMobile();
     }
 
+    if (name === 'photo-posts') { loadPhotoPosts(); startPostsAutoRefresh(loadPhotoPosts, 'photoPostModal'); } else if (name === 'blog-posts') { loadBlogPosts(); startPostsAutoRefresh(loadBlogPosts, 'blogPostModal'); } else { stopPostsAutoRefresh(); }
+    if (name === 'activity-log') loadActivityLog();
     if (name === 'subscribers') renderSubsTable();
     if (name === 'removed-subscribers') loadRemovedSubscribers();
     if (name === 'contacts') loadContacts();
@@ -1126,6 +1444,414 @@
     const res = await fetch(path, opts);
     if (res.status === 401) { localStorage.removeItem('adminToken'); window.location.href = '/admin-login.html'; }
     return res.json();
+  }
+
+  // Multipart variant for endpoints that accept file uploads (photo/blog post images).
+  // No Content-Type header here — the browser sets it (with the correct multipart boundary) automatically.
+  async function apiMultipart(path, method, formData) {
+    const opts = { method, headers: { Authorization: 'Bearer ' + TOKEN }, body: formData };
+    const res = await fetch(path, opts);
+    if (res.status === 401) { localStorage.removeItem('adminToken'); window.location.href = '/admin-login.html'; }
+    return res.json();
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  PHOTO POSTS & BLOG POSTS — shared helpers
+  // ═══════════════════════════════════════════════════════════════
+  function statusBadge(status) {
+    if (status === 'published') return '<span class="badge badge-green">Published</span>';
+    if (status === 'scheduled') return '<span class="badge badge-blue">Scheduled</span>';
+    return '<span class="badge badge-amber">Draft</span>';
+  }
+  function setStatusRadio(groupId, status, scheduleRowId) {
+    const group = document.getElementById(groupId);
+    group.querySelectorAll('.status-radio').forEach(l => {
+      const match = l.dataset.val === status;
+      l.classList.toggle('checked', match);
+      l.querySelector('input').checked = match;
+    });
+    document.getElementById(scheduleRowId).classList.toggle('show', status === 'scheduled');
+  }
+  function wireStatusRadios(groupId, scheduleRowId) {
+    document.getElementById(groupId).querySelectorAll('.status-radio').forEach(label => {
+      label.addEventListener('click', () => {
+        setStatusRadio(groupId, label.dataset.val, scheduleRowId);
+      });
+    });
+  }
+  function toLocalInputValue(isoString) {
+    const d = new Date(isoString);
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  let postsAutoRefreshTimer = null;
+  function startPostsAutoRefresh(fn, modalId) {
+    stopPostsAutoRefresh();
+    // Lightweight polling so view counts stay current while you're on the page,
+    // without disturbing an in-progress edit.
+    postsAutoRefreshTimer = setInterval(() => {
+      const modal = modalId && document.getElementById(modalId);
+      if (modal && modal.style.display === 'flex') return;
+      fn();
+    }, 20000);
+  }
+  function stopPostsAutoRefresh() {
+    if (postsAutoRefreshTimer) { clearInterval(postsAutoRefreshTimer); postsAutoRefreshTimer = null; }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  PHOTO POSTS
+  // ═══════════════════════════════════════════════════════════════
+  let allPhotoPosts = [];
+  let ppSelectedFiles = [];
+  let ppExistingImages = [];
+  let ppRemovedImages = [];
+  let pendingDeletePpId = null;
+
+  async function loadPhotoPosts() {
+    const data = await api('/admin/gallery-items');
+    if (!data.success) return;
+    allPhotoPosts = data.items;
+    renderPhotoPostsTable();
+  }
+
+  function renderPhotoPostsTable() {
+    const tbody = document.getElementById('photoPostsTable');
+    const q = (document.getElementById('ppSearchInput').value || '').toLowerCase();
+    const statusF = document.getElementById('ppStatusFilter').value;
+    const rows = allPhotoPosts.filter(p => {
+      const hay = (p.title + ' ' + p.category + ' ' + (p.tags || []).join(' ')).toLowerCase();
+      return (!q || hay.includes(q)) && (!statusF || p.status === statusF);
+    });
+    tbody.innerHTML = rows.length ? rows.map(p => {
+      const cover = p.images && p.images[0] ? p.images[0].url : '';
+      const tagsHtml = (p.tags || []).slice(0, 3).map(t => `<span class="tag-chip">${escHtml(t)}</span>`).join('')
+        + ((p.tags || []).length > 3 ? `<span class="tag-chip">+${p.tags.length - 3}</span>` : '');
+      return `
+      <tr>
+        <td><div class="post-thumb-cell">${cover ? `<img src="${cover}" alt="">` : '<i class="fa-solid fa-image"></i>'}</div></td>
+        <td style="font-weight:600;">${escHtml(p.title)}</td>
+        <td>${escHtml(p.category)}</td>
+        <td>${tagsHtml}</td>
+        <td>${statusBadge(p.status)}</td>
+        <td>${p.views}</td>
+        <td class="date-cell">${p.createdAt ? fmtDate(p.createdAt) : '—'}</td>
+        <td style="display:flex;gap:6px;">
+          <button class="btn btn-outline" style="padding:6px 10px;font-size:12px;" onclick="openPhotoPostModal('${p.id}')" title="Edit"><i class="fa-solid fa-pen"></i></button>
+          <button class="btn-del" onclick="askDeletePhotoPost('${p.id}','${escHtml(p.title)}')" title="Delete"><i class="fa-solid fa-trash"></i></button>
+        </td>
+      </tr>`;
+    }).join('') : `<tr class="empty-row"><td colspan="8"><div class="empty-icon">🖼️</div><div>No photo posts match.</div></td></tr>`;
+  }
+
+  function openPhotoPostModal(id) {
+    ppSelectedFiles = []; ppExistingImages = []; ppRemovedImages = [];
+    document.getElementById('ppId').value = id || '';
+    document.getElementById('ppModalTitle').innerHTML = id
+      ? '<i class="fa-solid fa-pen" style="color:var(--accent);"></i> Edit Photo Post'
+      : '<i class="fa-solid fa-image" style="color:var(--accent);"></i> New Photo Post';
+
+    if (id) {
+      const p = allPhotoPosts.find(x => x.id === id);
+      if (!p) return;
+      document.getElementById('ppTitle').value = p.title;
+      document.getElementById('ppCategory').value = p.category;
+      document.getElementById('ppLayout').value = p.layout;
+      document.getElementById('ppTags').value = (p.tags || []).join(', ');
+      document.getElementById('ppDescription').value = p.description || '';
+      document.getElementById('ppPinterest').value = p.pinterestUrl || '';
+      ppExistingImages = (p.images || []).slice();
+      setStatusRadio('ppStatusGroup', p.status, 'ppScheduleRow');
+      document.getElementById('ppPublishAt').value = p.publishAt ? toLocalInputValue(p.publishAt) : '';
+    } else {
+      document.getElementById('ppTitle').value = '';
+      document.getElementById('ppCategory').value = 'Travel';
+      document.getElementById('ppLayout').value = 'normal';
+      document.getElementById('ppTags').value = '';
+      document.getElementById('ppDescription').value = '';
+      document.getElementById('ppPinterest').value = '';
+      setStatusRadio('ppStatusGroup', 'draft', 'ppScheduleRow');
+      document.getElementById('ppPublishAt').value = '';
+    }
+    renderPpImagePreview();
+    document.getElementById('photoPostModal').style.display = 'flex';
+  }
+  function closePhotoPostModal() { document.getElementById('photoPostModal').style.display = 'none'; }
+
+  function handlePpFilesSelected(fileList) {
+    const files = Array.from(fileList);
+    if (ppExistingImages.length + ppSelectedFiles.length + files.length > 10) {
+      showToast('Max 10 images per photo post.', 'error');
+      return;
+    }
+    ppSelectedFiles = ppSelectedFiles.concat(files);
+    renderPpImagePreview();
+    document.getElementById('ppFileInput').value = '';
+  }
+  function renderPpImagePreview() {
+    const wrap = document.getElementById('ppImagePreview');
+    let html = '';
+    ppExistingImages.forEach(img => {
+      html += `<div class="img-upload-item"><img src="${img.url}"><button class="rm-btn" onclick="removePpExistingImage('${img.filename}')"><i class="fa-solid fa-xmark"></i></button></div>`;
+    });
+    ppSelectedFiles.forEach((f, i) => {
+      html += `<div class="img-upload-item"><img src="${URL.createObjectURL(f)}"><button class="rm-btn" onclick="removePpNewFile(${i})"><i class="fa-solid fa-xmark"></i></button></div>`;
+    });
+    wrap.innerHTML = html;
+  }
+  function removePpExistingImage(filename) {
+    ppRemovedImages.push(filename);
+    ppExistingImages = ppExistingImages.filter(im => im.filename !== filename);
+    renderPpImagePreview();
+  }
+  function removePpNewFile(i) { ppSelectedFiles.splice(i, 1); renderPpImagePreview(); }
+
+  async function savePhotoPost() {
+    const id = document.getElementById('ppId').value;
+    const title = document.getElementById('ppTitle').value.trim();
+    if (!title) { showToast('Title is required.', 'error'); return; }
+    const totalImages = ppExistingImages.length + ppSelectedFiles.length;
+    if (totalImages === 0) { showToast('At least one image is required.', 'error'); return; }
+
+    const status = document.querySelector('#ppStatusGroup input:checked').value;
+    const publishAt = document.getElementById('ppPublishAt').value;
+    if (status === 'scheduled' && !publishAt) { showToast('Pick a publish date/time for scheduled posts.', 'error'); return; }
+
+    const fd = new FormData();
+    fd.append('title', title);
+    fd.append('category', document.getElementById('ppCategory').value);
+    fd.append('layout', document.getElementById('ppLayout').value);
+    fd.append('tags', document.getElementById('ppTags').value);
+    fd.append('description', document.getElementById('ppDescription').value);
+    fd.append('pinterestUrl', document.getElementById('ppPinterest').value);
+    fd.append('status', status);
+    if (status === 'scheduled') fd.append('publishAt', new Date(publishAt).toISOString());
+    ppSelectedFiles.forEach(f => fd.append('images', f));
+    if (id && ppRemovedImages.length) fd.append('removeImages', JSON.stringify(ppRemovedImages));
+
+    const btn = document.getElementById('ppSaveBtn');
+    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving…';
+    const data = id
+      ? await apiMultipart('/admin/gallery-items/' + id, 'PUT', fd)
+      : await apiMultipart('/admin/gallery-items', 'POST', fd);
+    btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Photo Post';
+
+    if (data.success) {
+      showToast(id ? 'Photo post updated.' : 'Photo post created.', 'success');
+      closePhotoPostModal();
+      loadPhotoPosts();
+    } else {
+      showToast(data.error || 'Save failed.', 'error');
+    }
+  }
+
+  function askDeletePhotoPost(id, title) {
+    pendingDeletePpId = id;
+    document.getElementById('deletePpMsg').textContent = `Permanently delete "${title}"? This removes it from the site and cannot be undone.`;
+    document.getElementById('deletePpOverlay').style.display = 'flex';
+  }
+  function closeDeletePpOverlay() { document.getElementById('deletePpOverlay').style.display = 'none'; pendingDeletePpId = null; }
+  async function doDeletePhotoPost() {
+    if (!pendingDeletePpId) return;
+    const btn = document.getElementById('confirmDeletePpBtn');
+    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Deleting…';
+    const data = await api('/admin/gallery-items/' + pendingDeletePpId, 'DELETE');
+    btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-trash"></i> Delete Forever';
+    if (data.success) {
+      allPhotoPosts = allPhotoPosts.filter(p => p.id !== pendingDeletePpId);
+      renderPhotoPostsTable();
+      showToast('Photo post deleted.', 'success');
+    } else {
+      showToast(data.error || 'Delete failed.', 'error');
+    }
+    closeDeletePpOverlay();
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  BLOG POSTS
+  // ═══════════════════════════════════════════════════════════════
+  let allBlogPosts = [];
+  let bpSelectedFile = null;
+  let bpExistingCover = '';
+  let bpRemoveCover = false;
+  let pendingDeleteBpId = null;
+
+  async function loadBlogPosts() {
+    const data = await api('/admin/blog-posts');
+    if (!data.success) return;
+    allBlogPosts = data.posts;
+    renderBlogPostsTable();
+  }
+
+  function renderBlogPostsTable() {
+    const tbody = document.getElementById('blogPostsTable');
+    const q = (document.getElementById('bpSearchInput').value || '').toLowerCase();
+    const statusF = document.getElementById('bpStatusFilter').value;
+    const rows = allBlogPosts.filter(p => {
+      const hay = (p.title + ' ' + p.tag + ' ' + (p.tags || []).join(' ')).toLowerCase();
+      return (!q || hay.includes(q)) && (!statusF || p.status === statusF);
+    });
+    tbody.innerHTML = rows.length ? rows.map(p => {
+      const tagsHtml = (p.tags || []).slice(0, 3).map(t => `<span class="tag-chip">${escHtml(t)}</span>`).join('')
+        + ((p.tags || []).length > 3 ? `<span class="tag-chip">+${p.tags.length - 3}</span>` : '');
+      return `
+      <tr>
+        <td><div class="post-thumb-cell">${p.coverImage ? `<img src="${p.coverImage}" alt="">` : '<i class="fa-solid fa-newspaper"></i>'}</div></td>
+        <td style="font-weight:600;">${escHtml(p.title)}</td>
+        <td>${escHtml(p.tag)}</td>
+        <td>${tagsHtml}</td>
+        <td>${statusBadge(p.status)}</td>
+        <td>${p.views}</td>
+        <td class="date-cell">${p.createdAt ? fmtDate(p.createdAt) : '—'}</td>
+        <td style="display:flex;gap:6px;">
+          <button class="btn btn-outline" style="padding:6px 10px;font-size:12px;" onclick="openBlogPostModal('${p.id}')" title="Edit"><i class="fa-solid fa-pen"></i></button>
+          <button class="btn-del" onclick="askDeleteBlogPost('${p.id}','${escHtml(p.title)}')" title="Delete"><i class="fa-solid fa-trash"></i></button>
+        </td>
+      </tr>`;
+    }).join('') : `<tr class="empty-row"><td colspan="8"><div class="empty-icon">📰</div><div>No blog posts match.</div></td></tr>`;
+  }
+
+  function openBlogPostModal(id) {
+    bpSelectedFile = null; bpExistingCover = ''; bpRemoveCover = false;
+    document.getElementById('bpId').value = id || '';
+    document.getElementById('bpModalTitle').innerHTML = id
+      ? '<i class="fa-solid fa-pen" style="color:var(--accent);"></i> Edit Blog Post'
+      : '<i class="fa-solid fa-pen-nib" style="color:var(--accent);"></i> New Blog Post';
+
+    if (id) {
+      const p = allBlogPosts.find(x => x.id === id);
+      if (!p) return;
+      document.getElementById('bpTitle').value = p.title;
+      document.getElementById('bpTag').value = p.tag;
+      document.getElementById('bpTags').value = (p.tags || []).join(', ');
+      document.getElementById('bpExcerpt').value = p.excerpt || '';
+      document.getElementById('bpContent').value = p.content || '';
+      bpExistingCover = p.coverImage || '';
+      setStatusRadio('bpStatusGroup', p.status, 'bpScheduleRow');
+      document.getElementById('bpPublishAt').value = p.publishAt ? toLocalInputValue(p.publishAt) : '';
+    } else {
+      document.getElementById('bpTitle').value = '';
+      document.getElementById('bpTag').value = '';
+      document.getElementById('bpTags').value = '';
+      document.getElementById('bpExcerpt').value = '';
+      document.getElementById('bpContent').value = '';
+      setStatusRadio('bpStatusGroup', 'draft', 'bpScheduleRow');
+      document.getElementById('bpPublishAt').value = '';
+    }
+    renderBpImagePreview();
+    document.getElementById('blogPostModal').style.display = 'flex';
+  }
+  function closeBlogPostModal() { document.getElementById('blogPostModal').style.display = 'none'; }
+
+  function handleBpFileSelected(fileList) {
+    if (!fileList.length) return;
+    bpSelectedFile = fileList[0];
+    bpRemoveCover = false;
+    renderBpImagePreview();
+    document.getElementById('bpFileInput').value = '';
+  }
+  function renderBpImagePreview() {
+    const wrap = document.getElementById('bpImagePreview');
+    if (bpSelectedFile) {
+      wrap.innerHTML = `<div class="img-upload-item"><img src="${URL.createObjectURL(bpSelectedFile)}"><button class="rm-btn" onclick="removeBpFile()"><i class="fa-solid fa-xmark"></i></button></div>`;
+    } else if (bpExistingCover && !bpRemoveCover) {
+      wrap.innerHTML = `<div class="img-upload-item"><img src="${bpExistingCover}"><button class="rm-btn" onclick="removeBpFile()"><i class="fa-solid fa-xmark"></i></button></div>`;
+    } else {
+      wrap.innerHTML = '';
+    }
+  }
+  function removeBpFile() {
+    bpSelectedFile = null;
+    if (bpExistingCover) bpRemoveCover = true;
+    renderBpImagePreview();
+  }
+
+  async function saveBlogPost() {
+    const id = document.getElementById('bpId').value;
+    const title = document.getElementById('bpTitle').value.trim();
+    const content = document.getElementById('bpContent').value.trim();
+    if (!title || !content) { showToast('Title and content are required.', 'error'); return; }
+
+    const status = document.querySelector('#bpStatusGroup input:checked').value;
+    const publishAt = document.getElementById('bpPublishAt').value;
+    if (status === 'scheduled' && !publishAt) { showToast('Pick a publish date/time for scheduled posts.', 'error'); return; }
+
+    const fd = new FormData();
+    fd.append('title', title);
+    fd.append('tag', document.getElementById('bpTag').value || 'Life');
+    fd.append('tags', document.getElementById('bpTags').value);
+    fd.append('excerpt', document.getElementById('bpExcerpt').value);
+    fd.append('content', content);
+    fd.append('status', status);
+    if (status === 'scheduled') fd.append('publishAt', new Date(publishAt).toISOString());
+    if (bpSelectedFile) fd.append('coverImage', bpSelectedFile);
+    if (bpRemoveCover) fd.append('removeCoverImage', 'true');
+
+    const btn = document.getElementById('bpSaveBtn');
+    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving…';
+    const data = id
+      ? await apiMultipart('/admin/blog-posts/' + id, 'PUT', fd)
+      : await apiMultipart('/admin/blog-posts', 'POST', fd);
+    btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Blog Post';
+
+    if (data.success) {
+      showToast(id ? 'Blog post updated.' : 'Blog post created.', 'success');
+      closeBlogPostModal();
+      loadBlogPosts();
+    } else {
+      showToast(data.error || 'Save failed.', 'error');
+    }
+  }
+
+  function askDeleteBlogPost(id, title) {
+    pendingDeleteBpId = id;
+    document.getElementById('deleteBpMsg').textContent = `Permanently delete "${title}"? This removes it from the site and cannot be undone.`;
+    document.getElementById('deleteBpOverlay').style.display = 'flex';
+  }
+  function closeDeleteBpOverlay() { document.getElementById('deleteBpOverlay').style.display = 'none'; pendingDeleteBpId = null; }
+  async function doDeleteBlogPost() {
+    if (!pendingDeleteBpId) return;
+    const btn = document.getElementById('confirmDeleteBpBtn');
+    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Deleting…';
+    const data = await api('/admin/blog-posts/' + pendingDeleteBpId, 'DELETE');
+    btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-trash"></i> Delete Forever';
+    if (data.success) {
+      allBlogPosts = allBlogPosts.filter(p => p.id !== pendingDeleteBpId);
+      renderBlogPostsTable();
+      showToast('Blog post deleted.', 'success');
+    } else {
+      showToast(data.error || 'Delete failed.', 'error');
+    }
+    closeDeleteBpOverlay();
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  ACTIVITY LOG
+  // ═══════════════════════════════════════════════════════════════
+  let allActivityLogs = [];
+  function actionBadge(action) {
+    const map = { create: 'badge-green', update: 'badge-blue', delete: 'badge-amber', publish: 'badge-green' };
+    return `<span class="badge ${map[action] || 'badge-gray'}">${escHtml(action)}</span>`;
+  }
+  async function loadActivityLog() {
+    const data = await api('/admin/activity-logs?limit=150');
+    if (!data.success) return;
+    allActivityLogs = data.logs;
+    renderActivityLogTable();
+  }
+  function renderActivityLogTable() {
+    const tbody = document.getElementById('activityLogTable');
+    const entityF = document.getElementById('alEntityFilter').value;
+    const rows = allActivityLogs.filter(l => !entityF || l.entityType === entityF);
+    tbody.innerHTML = rows.length ? rows.map(l => `
+      <tr>
+        <td class="date-cell">${l.timestamp ? fmtDate(l.timestamp) : '—'}</td>
+        <td>${escHtml(l.actor)}</td>
+        <td>${actionBadge(l.action)}</td>
+        <td>${l.entityType === 'gallery_item' ? 'Photo Post' : 'Blog Post'}</td>
+        <td>${escHtml(l.entityTitle)}</td>
+        <td style="color:var(--muted);font-size:12.5px;">${escHtml(l.details)}</td>
+      </tr>`).join('') : `<tr class="empty-row"><td colspan="6"><div class="empty-icon">🕒</div><div>No activity yet.</div></td></tr>`;
   }
 
   // ── Load data ─────────────────────────────────────────────────
@@ -1699,6 +2425,8 @@
   loadData();
   loadContacts();
   loadNewsletterHistory();
+  wireStatusRadios('ppStatusGroup', 'ppScheduleRow');
+  wireStatusRadios('bpStatusGroup', 'bpScheduleRow');
 </script>
 </body>
 </html>

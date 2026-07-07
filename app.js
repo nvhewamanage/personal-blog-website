@@ -7,6 +7,10 @@ const admin        = require('firebase-admin');
 const rateLimit    = require('express-rate-limit');
 const helmet       = require('helmet');
 const validator    = require('validator');
+const multer       = require('multer');
+const fs           = require('fs');
+const fsPromises   = require('fs').promises;
+const path         = require('path');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -43,6 +47,43 @@ app.use('/images', express.static('images')); // serve root-level images folder
 app.use(express.json({ limit: '10kb' })); // Reject oversized bodies
 
 // ═══════════════════════════════════════════════════════════════
+//  IMAGE UPLOADS (local disk — /images/uploads/<gallery|blog>/)
+const UPLOAD_DIRS = {
+  gallery: path.join(__dirname, 'images', 'uploads', 'gallery'),
+  blog:    path.join(__dirname, 'images', 'uploads', 'blog'),
+};
+Object.values(UPLOAD_DIRS).forEach(dir => fs.mkdirSync(dir, { recursive: true }));
+
+function makeStorage(kind) {
+  return multer.diskStorage({
+    destination: (req, file, cb) => cb(null, UPLOAD_DIRS[kind]),
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+      const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      cb(null, `${kind}-${unique}${ext}`);
+    },
+  });
+}
+
+const imageFileFilter = (req, file, cb) => {
+  if (/^image\/(jpeg|jpg|png|webp|gif)$/.test(file.mimetype)) cb(null, true);
+  else cb(new Error('Only JPG, PNG, WEBP, or GIF images are allowed.'));
+};
+
+// Photo posts: up to 10 images per post
+const galleryUpload = multer({
+  storage: makeStorage('gallery'),
+  limits: { fileSize: 8 * 1024 * 1024, files: 10 },
+  fileFilter: imageFileFilter,
+});
+// Blog posts: single cover image
+const blogUpload = multer({
+  storage: makeStorage('blog'),
+  limits: { fileSize: 8 * 1024 * 1024, files: 1 },
+  fileFilter: imageFileFilter,
+});
+
+// ═══════════════════════════════════════════════════════════════
 //  FIREBASE SETUP
 
 let serviceAccount;
@@ -69,6 +110,72 @@ admin.initializeApp({
 
 const db = admin.firestore();
 console.log('✅ Firebase / Firestore connected');
+
+// ═══════════════════════════════════════════════════════════════
+//  PHOTO / BLOG POST SHARED CONFIG
+
+// How many published posts show on the live site before the oldest rolls off.
+// (Older posts stay saved in the admin panel — they're just hidden from the public site.)
+const GALLERY_DISPLAY_LIMIT = 20;
+const BLOG_DISPLAY_LIMIT    = 20;
+
+// Fixed gallery categories (must match the filter buttons in index.html)
+const GALLERY_CATEGORY_META = {
+  Travel:   { icon: 'fa-plane',  bg: 'linear-gradient(135deg,#e8e4c4,#c9c38d)' },
+  Nature:   { icon: 'fa-leaf',   bg: 'linear-gradient(135deg,#c4e8e4,#8dc9c3)' },
+  Portrait: { icon: 'fa-user',   bg: 'linear-gradient(135deg,#c4d8e8,#8dafc9)' },
+  Urban:    { icon: 'fa-city',   bg: 'linear-gradient(135deg,#d4e8c4,#9dc98d)' },
+};
+const BLOG_ICON_POOL = ['fa-pen-nib', 'fa-camera', 'fa-book-open', 'fa-lightbulb', 'fa-feather-pointed'];
+const BLOG_BG_POOL = [
+  'linear-gradient(135deg,#f5e6d3,#e8c9a0)',
+  'linear-gradient(135deg,#d3e6f5,#a0c9e8)',
+  'linear-gradient(135deg,#e6d3f5,#c9a0e8)',
+  'linear-gradient(135deg,#d3f5e0,#a0e8c0)',
+];
+
+function tsToIso(ts) {
+  if (!ts) return null;
+  return ts.toDate ? ts.toDate().toISOString() : ts;
+}
+
+function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+// Records who did what and when — powers the Activity Log tab in the admin panel.
+async function logActivity(action, entityType, entityId, entityTitle, actor, details = '') {
+  try {
+    await db.collection('activity_logs').add({
+      action, entityType, entityId, entityTitle,
+      actor: actor || 'admin',
+      details,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  } catch (err) {
+    console.error('Activity log error:', err.message);
+  }
+}
+
+// Flips 'scheduled' posts to 'published' once their publishAt time has passed.
+async function publishDuePosts() {
+  const now = admin.firestore.Timestamp.now();
+  for (const [col, entityType] of [['gallery_items', 'gallery_item'], ['blog_posts', 'blog_post']]) {
+    try {
+      const snap = await db.collection(col)
+        .where('status', '==', 'scheduled')
+        .where('publishAt', '<=', now)
+        .get();
+      for (const doc of snap.docs) {
+        await doc.ref.update({ status: 'published', updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+        await logActivity('publish', entityType, doc.id, doc.data().title, 'system', 'Auto-published on schedule');
+      }
+    } catch (err) {
+      // Firestore may need a composite index the first time this compound query runs —
+      // check server logs for an index-creation link if this errors persistently.
+      console.error(`Scheduled publish check failed for ${col}:`, err.message);
+    }
+  }
+}
+setInterval(publishDuePosts, 60 * 1000);
 
 // ─── Init default admin in Firestore ──────────────────────────
 // Runs once on startup; creates admin doc if none exists
@@ -739,31 +846,437 @@ ${previewText ? `<div style="display:none;max-height:0;overflow:hidden;">${previ
 </body></html>`;
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  PHOTO POSTS  (gallery_items)
+// ═══════════════════════════════════════════════════════════════
+
+function serializeGalleryItem(doc) {
+  const d = doc.data();
+  return {
+    id: doc.id,
+    title: d.title || '',
+    category: d.category || 'Travel',
+    layout: d.layout || 'normal',
+    images: d.images || [],
+    description: d.description || '',
+    tags: d.tags || [],
+    pinterestUrl: d.pinterestUrl || '',
+    status: d.status || 'draft',
+    publishAt: tsToIso(d.publishAt),
+    createdAt: tsToIso(d.createdAt),
+    updatedAt: tsToIso(d.updatedAt),
+    views: d.views || 0,
+    createdBy: d.createdBy || 'admin',
+    updatedBy: d.updatedBy || d.createdBy || 'admin',
+  };
+}
+
+// List ALL photo posts (any status) for the admin panel. Search/filter/sort
+// happens client-side in admin.html against this full list.
+app.get('/admin/gallery-items', authMiddleware, async (req, res) => {
+  try {
+    const snap = await db.collection('gallery_items').orderBy('createdAt', 'desc').get();
+    const items = snap.docs.map(serializeGalleryItem);
+    res.json({ success: true, items, total: items.length });
+  } catch (err) {
+    console.error('List gallery items error:', err.message);
+    res.status(500).json({ success: false, error: 'Failed to load photo posts.' });
+  }
+});
+
+// Create a photo post — multipart form, up to 10 images.
+app.post('/admin/gallery-items', authMiddleware, galleryUpload.array('images', 10), async (req, res) => {
+  try {
+    const { title, category, layout, description, tags, pinterestUrl, status, publishAt } = req.body;
+    if (!title || !title.trim())
+      return res.status(400).json({ success: false, error: 'Title is required.' });
+
+    const images = (req.files || []).map(f => ({ url: `/images/uploads/gallery/${f.filename}`, filename: f.filename }));
+    if (images.length === 0)
+      return res.status(400).json({ success: false, error: 'At least one image is required.' });
+
+    const finalStatus = status === 'scheduled' && publishAt ? 'scheduled' : (status === 'published' ? 'published' : 'draft');
+    const actor = req.admin?.username || 'admin';
+
+    const docRef = await db.collection('gallery_items').add({
+      title: title.trim(),
+      category: GALLERY_CATEGORY_META[category] ? category : 'Travel',
+      layout: ['normal', 'tall', 'wide'].includes(layout) ? layout : 'normal',
+      images,
+      description: (description || '').trim(),
+      tags: tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+      pinterestUrl: pinterestUrl || '',
+      status: finalStatus,
+      publishAt: finalStatus === 'scheduled' && publishAt ? admin.firestore.Timestamp.fromDate(new Date(publishAt)) : null,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      views: 0,
+      createdBy: actor,
+      updatedBy: actor,
+    });
+
+    await logActivity('create', 'gallery_item', docRef.id, title.trim(), actor, `Created as ${finalStatus}`);
+    res.json({ success: true, id: docRef.id });
+  } catch (err) {
+    console.error('Create gallery item error:', err.message);
+    res.status(500).json({ success: false, error: err.message || 'Failed to create photo post.' });
+  }
+});
+
+// Edit a photo post — can append new images and/or remove existing ones
+// (pass removeImages as a JSON array of filenames in the form body).
+app.put('/admin/gallery-items/:id', authMiddleware, galleryUpload.array('images', 10), async (req, res) => {
+  try {
+    const docRef = db.collection('gallery_items').doc(req.params.id);
+    const doc = await docRef.get();
+    if (!doc.exists) return res.status(404).json({ success: false, error: 'Photo post not found.' });
+    const existing = doc.data();
+    const actor = req.admin?.username || 'admin';
+
+    const { title, category, layout, description, tags, pinterestUrl, status, publishAt, removeImages } = req.body;
+
+    let images = existing.images || [];
+    if (removeImages) {
+      let toRemove = [];
+      try { toRemove = JSON.parse(removeImages); } catch { toRemove = []; }
+      for (const filename of toRemove) {
+        await fsPromises.unlink(path.join(UPLOAD_DIRS.gallery, filename)).catch(() => {});
+      }
+      images = images.filter(im => !toRemove.includes(im.filename));
+    }
+    const newImages = (req.files || []).map(f => ({ url: `/images/uploads/gallery/${f.filename}`, filename: f.filename }));
+    images = images.concat(newImages);
+
+    if (images.length === 0)
+      return res.status(400).json({ success: false, error: 'A photo post needs at least one image.' });
+
+    const finalStatus = status === 'scheduled' && publishAt ? 'scheduled' : (status === 'published' ? 'published' : (status === 'draft' ? 'draft' : existing.status));
+
+    await docRef.update({
+      title: title !== undefined ? title.trim() : existing.title,
+      category: category && GALLERY_CATEGORY_META[category] ? category : existing.category,
+      layout: layout && ['normal', 'tall', 'wide'].includes(layout) ? layout : existing.layout,
+      images,
+      description: description !== undefined ? description.trim() : existing.description,
+      tags: tags !== undefined ? tags.split(',').map(t => t.trim()).filter(Boolean) : existing.tags,
+      pinterestUrl: pinterestUrl !== undefined ? pinterestUrl : existing.pinterestUrl,
+      status: finalStatus,
+      publishAt: finalStatus === 'scheduled' && publishAt ? admin.firestore.Timestamp.fromDate(new Date(publishAt)) : null,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedBy: actor,
+    });
+
+    await logActivity('update', 'gallery_item', req.params.id, title || existing.title, actor, `Updated (${finalStatus})`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Update gallery item error:', err.message);
+    res.status(500).json({ success: false, error: err.message || 'Update failed.' });
+  }
+});
+
+// Delete a photo post permanently (and its image files).
+app.delete('/admin/gallery-items/:id', authMiddleware, async (req, res) => {
+  try {
+    const docRef = db.collection('gallery_items').doc(req.params.id);
+    const doc = await docRef.get();
+    if (!doc.exists) return res.status(404).json({ success: false, error: 'Not found.' });
+    const data = doc.data();
+    for (const img of (data.images || [])) {
+      await fsPromises.unlink(path.join(UPLOAD_DIRS.gallery, img.filename)).catch(() => {});
+    }
+    await docRef.delete();
+    await logActivity('delete', 'gallery_item', req.params.id, data.title, req.admin?.username || 'admin', 'Deleted permanently');
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Delete gallery item error:', err.message);
+    res.status(500).json({ success: false, error: 'Delete failed.' });
+  }
+});
+
+// Public feed — only published posts, newest first, capped at the display limit.
+app.get('/api/gallery-items', async (req, res) => {
+  try {
+    const snap = await db.collection('gallery_items')
+      .where('status', '==', 'published')
+      .orderBy('createdAt', 'desc')
+      .limit(GALLERY_DISPLAY_LIMIT)
+      .get();
+    const items = snap.docs.map(doc => {
+      const d = doc.data();
+      const meta = GALLERY_CATEGORY_META[d.category] || GALLERY_CATEGORY_META.Travel;
+      return {
+        id: doc.id,
+        title: d.title,
+        category: d.category,
+        filterKey: (d.category || 'Travel').toLowerCase(),
+        layout: d.layout || 'normal',
+        images: (d.images || []).map(im => im.url),
+        pinterestUrl: d.pinterestUrl || '',
+        icon: meta.icon,
+        bg: meta.bg,
+      };
+    });
+    res.json({ success: true, items });
+  } catch (err) {
+    console.error('Public gallery fetch error:', err.message);
+    res.status(500).json({ success: false, error: 'Failed to load gallery.' });
+  }
+});
+
+// Public view-counter — fired by the site whenever a visitor opens a photo post.
+app.post('/api/gallery-items/:id/view', publicLimiter, async (req, res) => {
+  try {
+    await db.collection('gallery_items').doc(req.params.id).update({ views: admin.firestore.FieldValue.increment(1) });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  BLOG POSTS  (blog_posts)
+// ═══════════════════════════════════════════════════════════════
+
+function serializeBlogPost(doc) {
+  const d = doc.data();
+  return {
+    id: doc.id,
+    title: d.title || '',
+    tag: d.tag || 'Life',
+    excerpt: d.excerpt || '',
+    content: d.content || '',
+    read: d.read || '3 min read',
+    coverImage: d.coverImage || '',
+    icon: d.icon || 'fa-pen-nib',
+    bg: d.bg || BLOG_BG_POOL[0],
+    tags: d.tags || [],
+    status: d.status || 'draft',
+    publishAt: tsToIso(d.publishAt),
+    createdAt: tsToIso(d.createdAt),
+    updatedAt: tsToIso(d.updatedAt),
+    views: d.views || 0,
+    createdBy: d.createdBy || 'admin',
+    updatedBy: d.updatedBy || d.createdBy || 'admin',
+  };
+}
+
+app.get('/admin/blog-posts', authMiddleware, async (req, res) => {
+  try {
+    const snap = await db.collection('blog_posts').orderBy('createdAt', 'desc').get();
+    const posts = snap.docs.map(serializeBlogPost);
+    res.json({ success: true, posts, total: posts.length });
+  } catch (err) {
+    console.error('List blog posts error:', err.message);
+    res.status(500).json({ success: false, error: 'Failed to load blog posts.' });
+  }
+});
+
+app.post('/admin/blog-posts', authMiddleware, blogUpload.single('coverImage'), async (req, res) => {
+  try {
+    const { title, tag, excerpt, content, tags, status, publishAt } = req.body;
+    if (!title || !title.trim() || !content || !content.trim())
+      return res.status(400).json({ success: false, error: 'Title and content are required.' });
+
+    const coverImage = req.file ? `/images/uploads/blog/${req.file.filename}` : '';
+    const wordCount = content.trim().split(/\s+/).length;
+    const readTime = Math.max(1, Math.round(wordCount / 200)) + ' min read';
+    const finalStatus = status === 'scheduled' && publishAt ? 'scheduled' : (status === 'published' ? 'published' : 'draft');
+    const actor = req.admin?.username || 'admin';
+
+    const docRef = await db.collection('blog_posts').add({
+      title: title.trim(),
+      tag: (tag || 'Life').trim(),
+      excerpt: (excerpt || content.trim().slice(0, 160)).trim(),
+      content: content.trim(),
+      read: readTime,
+      coverImage,
+      bg: pickRandom(BLOG_BG_POOL),
+      icon: pickRandom(BLOG_ICON_POOL),
+      tags: tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+      status: finalStatus,
+      publishAt: finalStatus === 'scheduled' && publishAt ? admin.firestore.Timestamp.fromDate(new Date(publishAt)) : null,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      views: 0,
+      createdBy: actor,
+      updatedBy: actor,
+    });
+
+    await logActivity('create', 'blog_post', docRef.id, title.trim(), actor, `Created as ${finalStatus}`);
+    res.json({ success: true, id: docRef.id });
+  } catch (err) {
+    console.error('Create blog post error:', err.message);
+    res.status(500).json({ success: false, error: err.message || 'Failed to create blog post.' });
+  }
+});
+
+app.put('/admin/blog-posts/:id', authMiddleware, blogUpload.single('coverImage'), async (req, res) => {
+  try {
+    const docRef = db.collection('blog_posts').doc(req.params.id);
+    const doc = await docRef.get();
+    if (!doc.exists) return res.status(404).json({ success: false, error: 'Blog post not found.' });
+    const existing = doc.data();
+    const actor = req.admin?.username || 'admin';
+
+    const { title, tag, excerpt, content, tags, status, publishAt, removeCoverImage } = req.body;
+
+    let coverImage = existing.coverImage || '';
+    if (removeCoverImage === 'true' && coverImage) {
+      const filename = path.basename(coverImage);
+      await fsPromises.unlink(path.join(UPLOAD_DIRS.blog, filename)).catch(() => {});
+      coverImage = '';
+    }
+    if (req.file) {
+      if (coverImage) {
+        const oldFilename = path.basename(coverImage);
+        await fsPromises.unlink(path.join(UPLOAD_DIRS.blog, oldFilename)).catch(() => {});
+      }
+      coverImage = `/images/uploads/blog/${req.file.filename}`;
+    }
+
+    const newContent = content !== undefined ? content.trim() : existing.content;
+    const wordCount = newContent.trim().split(/\s+/).length;
+    const readTime = Math.max(1, Math.round(wordCount / 200)) + ' min read';
+    const finalStatus = status === 'scheduled' && publishAt ? 'scheduled' : (status === 'published' ? 'published' : (status === 'draft' ? 'draft' : existing.status));
+
+    await docRef.update({
+      title: title !== undefined ? title.trim() : existing.title,
+      tag: tag !== undefined ? tag.trim() : existing.tag,
+      excerpt: excerpt !== undefined ? excerpt.trim() : existing.excerpt,
+      content: newContent,
+      read: readTime,
+      coverImage,
+      tags: tags !== undefined ? tags.split(',').map(t => t.trim()).filter(Boolean) : existing.tags,
+      status: finalStatus,
+      publishAt: finalStatus === 'scheduled' && publishAt ? admin.firestore.Timestamp.fromDate(new Date(publishAt)) : null,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedBy: actor,
+    });
+
+    await logActivity('update', 'blog_post', req.params.id, title || existing.title, actor, `Updated (${finalStatus})`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Update blog post error:', err.message);
+    res.status(500).json({ success: false, error: err.message || 'Update failed.' });
+  }
+});
+
+app.delete('/admin/blog-posts/:id', authMiddleware, async (req, res) => {
+  try {
+    const docRef = db.collection('blog_posts').doc(req.params.id);
+    const doc = await docRef.get();
+    if (!doc.exists) return res.status(404).json({ success: false, error: 'Not found.' });
+    const data = doc.data();
+    if (data.coverImage) {
+      const filename = path.basename(data.coverImage);
+      await fsPromises.unlink(path.join(UPLOAD_DIRS.blog, filename)).catch(() => {});
+    }
+    await docRef.delete();
+    await logActivity('delete', 'blog_post', req.params.id, data.title, req.admin?.username || 'admin', 'Deleted permanently');
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Delete blog post error:', err.message);
+    res.status(500).json({ success: false, error: 'Delete failed.' });
+  }
+});
+
+// Public feed — only published posts, newest first, capped at the display limit.
+app.get('/api/blog-posts', async (req, res) => {
+  try {
+    const snap = await db.collection('blog_posts')
+      .where('status', '==', 'published')
+      .orderBy('createdAt', 'desc')
+      .limit(BLOG_DISPLAY_LIMIT)
+      .get();
+    const posts = snap.docs.map((doc, i) => {
+      const d = doc.data();
+      const created = d.createdAt?.toDate ? d.createdAt.toDate() : new Date();
+      return {
+        id: doc.id,
+        title: d.title,
+        tag: d.tag,
+        excerpt: d.excerpt,
+        content: d.content,
+        read: d.read,
+        coverImage: d.coverImage || '',
+        icon: d.icon || 'fa-pen-nib',
+        bg: d.bg || BLOG_BG_POOL[0],
+        date: created.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        featured: i === 0, // newest published post gets the large "featured" card treatment
+      };
+    });
+    res.json({ success: true, posts });
+  } catch (err) {
+    console.error('Public blog fetch error:', err.message);
+    res.status(500).json({ success: false, error: 'Failed to load blog posts.' });
+  }
+});
+
+app.post('/api/blog-posts/:id/view', publicLimiter, async (req, res) => {
+  try {
+    await db.collection('blog_posts').doc(req.params.id).update({ views: admin.firestore.FieldValue.increment(1) });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  ACTIVITY LOG  (who edited what and when, across both modules)
+// ═══════════════════════════════════════════════════════════════
+app.get('/admin/activity-logs', authMiddleware, async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 100, 300);
+    const snap = await db.collection('activity_logs').orderBy('timestamp', 'desc').limit(limit).get();
+    const logs = snap.docs.map(doc => {
+      const d = doc.data();
+      return {
+        id: doc.id,
+        action: d.action,
+        entityType: d.entityType,
+        entityId: d.entityId,
+        entityTitle: d.entityTitle,
+        actor: d.actor,
+        details: d.details || '',
+        timestamp: tsToIso(d.timestamp),
+      };
+    });
+    res.json({ success: true, logs, total: logs.length });
+  } catch (err) {
+    console.error('List activity logs error:', err.message);
+    res.status(500).json({ success: false, error: 'Failed to load activity logs.' });
+  }
+});
+
+
 // ─── Site Context for Chatbot ─────────────────────────────────────────────────
 // Returns live blog posts, gallery items and author info so the AI can answer
 // questions about real content on the site.
 app.get('/api/site-context', async (req, res) => {
   try {
-    // Fetch blog posts
+    // Fetch published blog posts only — drafts/scheduled posts stay out of the chatbot's view.
     const postsSnap = await db.collection('blog_posts')
-      .orderBy('date', 'desc')
+      .where('status', '==', 'published')
+      .orderBy('createdAt', 'desc')
       .limit(20)
       .get();
 
     const posts = postsSnap.docs.map(doc => {
       const d = doc.data();
+      const created = d.createdAt?.toDate ? d.createdAt.toDate() : new Date();
       return {
         title:   d.title   || '',
         tag:     d.tag     || '',
-        date:    d.date    || '',
+        date:    created.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         read:    d.read    || '',
         excerpt: d.excerpt || '',
         author:  d.author  || 'Chanuka Nimsara',
       };
     });
 
-    // Fetch gallery items
+    // Fetch published gallery items only
     const gallerySnap = await db.collection('gallery_items')
+      .where('status', '==', 'published')
       .orderBy('createdAt', 'desc')
       .limit(30)
       .get();

@@ -463,7 +463,6 @@
       font-size: 13px; font-weight: 500;
     }
     .g-ph i { font-size: 32px; }
-    .g-ph.has-cover-photo i, .g-ph.has-cover-photo span { display: none; }
     .g-ov {
       position: absolute; inset: 0;
       background: linear-gradient(to top, rgba(26,26,46,.75) 0%, transparent 60%);
@@ -475,47 +474,6 @@
     .g-item:hover .g-ov { opacity: 1; }
     .g-ov p  { font-weight: 600; font-size: 15px; }
     .g-ov span { font-size: 12px; opacity: .7; }
-
-    /* ============================================================
-       LIKE BUTTON (gallery tiles, blog cards, and both popups)
-       ============================================================ */
-    .like-btn {
-      display: inline-flex; align-items: center; gap: 6px;
-      background: none; border: none; cursor: pointer;
-      font-family: inherit; font-size: 13px; font-weight: 600;
-      color: inherit; padding: 0; transition: transform var(--ease), color var(--ease);
-    }
-    .like-btn:hover { transform: translateY(-1px); }
-    .like-btn i { font-size: 16px; transition: color var(--ease), transform .2s ease; }
-    .like-btn.liked i { color: var(--accent); transform: scale(1.1); }
-    .like-btn .like-count { min-width: 10px; }
-
-    /* Floating like button on gallery grid tiles */
-    .g-like-btn {
-      position: absolute; top: 12px; right: 12px; z-index: 3;
-      width: 34px; height: 34px; border-radius: 50%;
-      background: rgba(26,26,46,.55); backdrop-filter: blur(4px);
-      color: #fff; justify-content: center;
-      opacity: 0; transition: opacity var(--ease), background var(--ease), transform var(--ease);
-    }
-    .g-item:hover .g-like-btn, .g-like-btn.liked { opacity: 1; }
-    .g-like-btn .like-count { display: none; }
-    .g-like-btn:hover { background: rgba(232,21,74,.85); }
-    .g-like-btn.liked { background: var(--accent); }
-    .g-like-btn.liked i { color: #fff; transform: scale(1.1); }
-
-    /* Like button inside blog cards */
-    .bc-likebar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    .bc-like-btn { color: var(--muted); }
-    .bc-like-btn.liked { color: var(--accent); }
-
-    /* Like button inside popup modals */
-    .modal-like-btn {
-      color: var(--dark); background: var(--bg-alt);
-      padding: 10px 18px; border-radius: 30px; margin-top: 4px;
-    }
-    .modal-like-btn:hover { background: var(--accent-l); }
-    .modal-like-btn.liked { color: var(--accent); }
 
     /* ============================================================
        4. MY BLOG
@@ -543,9 +501,7 @@
       height: 190px;
       display: flex; align-items: center; justify-content: center;
       color: rgba(255,255,255,.7); font-size: 40px; flex-shrink: 0;
-      position: relative;
     }
-    .bc-thumb.has-cover-photo i { display: none; }
     .bc-body {
       padding: 24px; display: flex;
       flex-direction: column; gap: 10px;
@@ -843,8 +799,8 @@
     .g-modal-overlay.open { opacity: 1; pointer-events: auto; }
     .g-modal {
       background: var(--white); border-radius: 20px;
-      max-width: 1160px; width: 100%;
-      max-height: 95vh; overflow: hidden; overflow-y: auto;
+      max-width: 960px; width: 100%;
+      max-height: 92vh; overflow: hidden; overflow-y: auto;
       box-shadow: 0 32px 80px rgba(26,26,46,.3);
       transform: scale(.93); transition: transform .3s cubic-bezier(.4,0,.2,1);
     }
@@ -857,11 +813,11 @@
       background: #fff;
       display: flex; align-items: center; justify-content: center;
       font-size: 64px; color: rgba(255,255,255,.8);
-      min-height: 360px; max-height: 76vh;
+      min-height: 320px; max-height: 68vh;
       overflow: hidden;
     }
     .g-modal-thumb.g-orient-landscape { aspect-ratio: 4 / 3; height: auto; }
-    .g-modal-thumb.g-orient-portrait  { aspect-ratio: 3 / 4; height: auto; max-width: 560px; margin: 0 auto; }
+    .g-modal-thumb.g-orient-portrait  { aspect-ratio: 3 / 4; height: auto; max-width: 460px; margin: 0 auto; }
     .g-modal-thumb img.g-modal-img {
       width: 100%; height: 100%; object-fit: contain; display: block;
     }
@@ -892,6 +848,26 @@
       transition: background var(--ease); z-index: 5;
     }
     .g-modal-close:hover { background: var(--accent); }
+    .g-modal-nav {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      width: 38px; height: 38px; border-radius: 50%; border: none;
+      background: rgba(0,0,0,.4); color: #fff; font-size: 15px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: background var(--ease); z-index: 4;
+    }
+    .g-modal-nav:hover { background: var(--accent); }
+    .g-modal-nav--prev { left: 14px; }
+    .g-modal-nav--next { right: 14px; }
+    .g-modal-dots {
+      display: flex; justify-content: center; gap: 6px;
+      padding: 12px 0 0; background: #fff;
+    }
+    .g-modal-dots .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #d8d8e0; cursor: pointer; transition: background var(--ease), transform var(--ease);
+      border: none; padding: 0;
+    }
+    .g-modal-dots .dot.active { background: var(--accent); transform: scale(1.3); }
 
     /* ============================================================
        BLOG POST POPUP MODAL
@@ -905,24 +881,16 @@
     .blog-modal-overlay.open { opacity: 1; pointer-events: auto; }
     .blog-modal {
       background: var(--white); border-radius: 20px;
-      max-width: 900px; width: 100%; max-height: 95vh; overflow-y: auto;
+      max-width: 860px; width: 100%; max-height: 90vh; overflow-y: auto;
       box-shadow: 0 32px 80px rgba(26,26,46,.3);
       transform: scale(.93); transition: transform .3s cubic-bezier(.4,0,.2,1);
     }
     .blog-modal-overlay.open .blog-modal { transform: scale(1); }
-    /* Cover-photo frame for the blog popup: falls back to the gradient + icon
-       "default cover" whenever a post has no dedicated cover photo, and
-       auto-adjusts to the photo's landscape/portrait orientation otherwise. */
     .blog-modal-hero {
       width: 100%; height: 300px;
-      background: #fff;
       display: flex; align-items: center; justify-content: center;
       font-size: 64px; color: rgba(255,255,255,.8); flex-shrink: 0;
-      overflow: hidden;
     }
-    .blog-modal-hero.bh-orient-landscape { aspect-ratio: 16 / 9; height: auto; max-height: 60vh; }
-    .blog-modal-hero.bh-orient-portrait  { aspect-ratio: 3 / 4; height: auto; max-height: 65vh; max-width: 480px; margin: 0 auto; }
-    .blog-modal-hero img.bh-img { width: 100%; height: 100%; object-fit: contain; display: block; }
     .blog-modal-body { padding: 40px; }
     .blog-modal-body .btag { margin-bottom: 12px; }
     .blog-modal-body h2 { font-family: var(--fd); font-size: 30px; color: var(--dark); line-height: 1.3; margin-bottom: 16px; }
@@ -931,12 +899,12 @@
     .blog-modal-body .post-content p { margin-bottom: 16px; }
     .blog-modal-close {
       position: absolute; top: 16px; right: 16px;
-      width: 40px; height: 40px; background: rgba(0,0,0,.45);
+      width: 40px; height: 40px; background: rgba(255,255,255,.15);
       border: none; border-radius: 50%; color: #fff; font-size: 18px;
       cursor: pointer; display: flex; align-items: center; justify-content: center;
-      transition: background var(--ease); z-index: 5;
+      transition: background var(--ease);
     }
-    .blog-modal-close:hover { background: var(--accent); }
+    .blog-modal-close:hover { background: rgba(255,255,255,.3); }
 
     /* ============================================================
        CHATBOT WIDGET
@@ -1127,47 +1095,8 @@
     <button class="gf" data-f="portrait">Portrait</button>
     <button class="gf" data-f="urban">Urban</button>
   </div>
-  <div class="g-grid">
-    <div class="g-item reveal" data-c="travel" onclick="openGalleryModal(this)" data-title="Mountain Trails" data-img="images/cover-images/mountain-trails.jpg" data-pin="https://www.pinterest.com/pin/8675309012345671/" data-cat="Travel" data-bg="linear-gradient(135deg,#e8d5c4,#c9a98d)" data-icon="fa-mountain-sun">
-      <div class="g-ph" style="background:linear-gradient(135deg,#e8d5c4,#c9a98d)"><i class="fa-solid fa-mountain-sun"></i><span>Mountain Trails</span></div>
-      <div class="g-ov"><p>Mountain Trails</p><span>Travel</span></div>
-      <button class="like-btn g-like-btn" data-like-id="photo:mountain-trails" onclick="event.stopPropagation();toggleLike(this)" aria-label="Like this photo" title="Like"><i class="fa-solid fa-heart"></i><span class="like-count">0</span></button>
-    </div>
-    <div class="g-item g-item--tall reveal" data-c="portrait" onclick="openGalleryModal(this)" data-title="Golden Hour" data-img="images/cover-images/golden-hour.jpg" data-pin="https://www.pinterest.com/pin/8675309012345672/" data-cat="Portrait" data-bg="linear-gradient(135deg,#c4d8e8,#8dafc9)" data-icon="fa-user">
-      <div class="g-ph" style="background:linear-gradient(135deg,#c4d8e8,#8dafc9)"><i class="fa-solid fa-user"></i><span>Golden Hour</span></div>
-      <div class="g-ov"><p>Golden Hour</p><span>Portrait</span></div>
-      <button class="like-btn g-like-btn" data-like-id="photo:golden-hour" onclick="event.stopPropagation();toggleLike(this)" aria-label="Like this photo" title="Like"><i class="fa-solid fa-heart"></i><span class="like-count">0</span></button>
-    </div>
-    <div class="g-item reveal" data-c="urban" onclick="openGalleryModal(this)" data-title="City Lights" data-img="images/cover-images/city-lights.jpg" data-pin="https://www.pinterest.com/pin/8675309012345673/" data-cat="Urban" data-bg="linear-gradient(135deg,#d4e8c4,#9dc98d)" data-icon="fa-city">
-      <div class="g-ph" style="background:linear-gradient(135deg,#d4e8c4,#9dc98d)"><i class="fa-solid fa-city"></i><span>City Lights</span></div>
-      <div class="g-ov"><p>City Lights</p><span>Urban</span></div>
-      <button class="like-btn g-like-btn" data-like-id="photo:city-lights" onclick="event.stopPropagation();toggleLike(this)" aria-label="Like this photo" title="Like"><i class="fa-solid fa-heart"></i><span class="like-count">0</span></button>
-    </div>
-    <div class="g-item g-item--wide reveal" data-c="nature" onclick="openGalleryModal(this)" data-title="Morning Mist" data-img="images/cover-images/morning-mist.jpg" data-pin="https://www.pinterest.com/pin/8675309012345674/" data-cat="Nature" data-bg="linear-gradient(135deg,#e8c4d8,#c98db8)" data-icon="fa-leaf">
-      <div class="g-ph" style="background:linear-gradient(135deg,#e8c4d8,#c98db8)"><i class="fa-solid fa-leaf"></i><span>Morning Mist</span></div>
-      <div class="g-ov"><p>Morning Mist</p><span>Nature</span></div>
-      <button class="like-btn g-like-btn" data-like-id="photo:morning-mist" onclick="event.stopPropagation();toggleLike(this)" aria-label="Like this photo" title="Like"><i class="fa-solid fa-heart"></i><span class="like-count">0</span></button>
-    </div>
-    <div class="g-item reveal" data-c="travel" onclick="openGalleryModal(this)" data-title="Coastal Roads" data-img="images/cover-images/coastal-roads.jpg" data-pin="https://www.pinterest.com/pin/8675309012345675/" data-cat="Travel" data-bg="linear-gradient(135deg,#e8e4c4,#c9c38d)" data-icon="fa-plane">
-      <div class="g-ph" style="background:linear-gradient(135deg,#e8e4c4,#c9c38d)"><i class="fa-solid fa-plane"></i><span>Coastal Roads</span></div>
-      <div class="g-ov"><p>Coastal Roads</p><span>Travel</span></div>
-      <button class="like-btn g-like-btn" data-like-id="photo:coastal-roads" onclick="event.stopPropagation();toggleLike(this)" aria-label="Like this photo" title="Like"><i class="fa-solid fa-heart"></i><span class="like-count">0</span></button>
-    </div>
-    <div class="g-item reveal" data-c="nature" onclick="openGalleryModal(this)" data-title="Still Waters" data-img="images/cover-images/still-waters.jpg" data-pin="https://www.pinterest.com/pin/8675309012345676/" data-cat="Nature" data-bg="linear-gradient(135deg,#c4e8e4,#8dc9c3)" data-icon="fa-water">
-      <div class="g-ph" style="background:linear-gradient(135deg,#c4e8e4,#8dc9c3)"><i class="fa-solid fa-water"></i><span>Still Waters</span></div>
-      <div class="g-ov"><p>Still Waters</p><span>Nature</span></div>
-      <button class="like-btn g-like-btn" data-like-id="photo:still-waters" onclick="event.stopPropagation();toggleLike(this)" aria-label="Like this photo" title="Like"><i class="fa-solid fa-heart"></i><span class="like-count">0</span></button>
-    </div>
-    <div class="g-item reveal" data-c="urban" onclick="openGalleryModal(this)" data-title="Street Art" data-img="images/cover-images/street-art.jpg" data-pin="https://www.pinterest.com/pin/8675309012345677/" data-cat="Urban" data-bg="linear-gradient(135deg,#d8c4e8,#b38dc9)" data-icon="fa-building">
-      <div class="g-ph" style="background:linear-gradient(135deg,#d8c4e8,#b38dc9)"><i class="fa-solid fa-building"></i><span>Street Art</span></div>
-      <div class="g-ov"><p>Street Art</p><span>Urban</span></div>
-      <button class="like-btn g-like-btn" data-like-id="photo:street-art" onclick="event.stopPropagation();toggleLike(this)" aria-label="Like this photo" title="Like"><i class="fa-solid fa-heart"></i><span class="like-count">0</span></button>
-    </div>
-    <div class="g-item reveal" data-c="portrait" onclick="openGalleryModal(this)" data-title="Candid Moments" data-img="images/cover-images/candid-moments.jpg" data-pin="https://www.pinterest.com/pin/8675309012345678/" data-cat="Portrait" data-bg="linear-gradient(135deg,#e8c4c4,#c98d8d)" data-icon="fa-face-smile">
-      <div class="g-ph" style="background:linear-gradient(135deg,#e8c4c4,#c98d8d)"><i class="fa-solid fa-face-smile"></i><span>Candid Moments</span></div>
-      <div class="g-ov"><p>Candid Moments</p><span>Portrait</span></div>
-      <button class="like-btn g-like-btn" data-like-id="photo:candid-moments" onclick="event.stopPropagation();toggleLike(this)" aria-label="Like this photo" title="Like"><i class="fa-solid fa-heart"></i><span class="like-count">0</span></button>
-    </div>
+  <div class="g-grid" id="galleryGrid">
+    <p style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px 0;">Loading gallery…</p>
   </div>
 </section>
 
@@ -1178,129 +1107,8 @@
     <h2 class="sec-title reveal">My <span class="a">Blog</span></h2>
     <p class="sec-sub reveal" style="margin:0 auto;">Thoughts, reflections, and stories from everyday life.</p>
   </div>
-  <div class="blog-grid">
-    <article class="bc bc--feat reveal"
-      data-tag="Life"
-      data-title="The Art of Slowing Down in a Fast World" data-img="images/cover-images/cover-bp-1.png"
-      data-date="Feb 15, 2026" data-read="6 min read"
-      data-bg="linear-gradient(135deg,#f5e6d3,#e8c9a0)" data-icon="fa-pen-nib"
-      data-content="We live in an age that glorifies busyness. But what happens when we dare to pause and simply breathe?
-
-I spent a month offline — no social media, no notifications, no 24-hour news cycle. What I found surprised me.
-
-The first week was difficult. My hands kept reaching for my phone, muscle memory betraying me at every quiet moment. But by week two, something shifted. I started noticing things again — the way morning light falls across the kitchen floor, the sound of rain on leaves, the feeling of having nowhere to be.
-
-Slowing down isn't about being unproductive. It's about being intentional. Every task done with full presence becomes richer. Every conversation becomes deeper when you're not half-distracted by a screen.
-
-If you've been feeling overwhelmed, I'd invite you to try it — even for a weekend. Turn off notifications. Go for a walk without your phone. Cook a meal slowly. Watch the world without needing to document it.
-
-You might be surprised by what you find in the silence.">
-      <div class="bc-thumb" style="background:linear-gradient(135deg,#f5e6d3,#e8c9a0)"><i class="fa-solid fa-pen-nib"></i></div>
-      <div class="bc-body">
-        <span class="btag">Life</span>
-        <h3 class="bc-title">The Art of Slowing Down in a Fast World</h3>
-        <p class="bc-exc">We live in an age that glorifies busyness. But what happens when we dare to pause and simply breathe? Here's what I learned from a month offline...</p>
-        <div class="bc-meta">
-          <span><i class="fa-regular fa-calendar"></i> Feb 15, 2026</span>
-          <span><i class="fa-regular fa-clock"></i> 6 min read</span>
-        </div>
-        <div class="bc-likebar">
-          <button class="like-btn bc-like-btn" data-like-id="blog:the-art-of-slowing-down-in-a-fast-world" onclick="toggleLike(this)" aria-label="Like this post" title="Like"><i class="fa-solid fa-heart"></i><span class="like-count">0</span></button>
-          <a href="#" class="bc-more" onclick="openBlogModal(this.closest('article'));return false;">Read more <i class="fa-solid fa-arrow-right"></i></a>
-      </div>
-      </div>
-    </article>
-    <article class="bc reveal"
-      data-tag="Photography"
-      data-title="What My Camera Taught Me About Patience" data-img="images/cover-images/cover-bp-2.png"
-      data-date="Jan 30, 2026" data-read="4 min read"
-      data-bg="linear-gradient(135deg,#d3e6f5,#a0c9e8)" data-icon="fa-camera"
-      data-content="Great shots rarely happen instantly. They're earned through waiting, watching, and learning to see the world differently.
-
-Photography taught me that patience isn't passive — it's an active, alert form of attention. You position yourself, you wait, and you stay ready for the moment that everything aligns.
-
-I remember spending three hours at a train station waiting for the light to hit a particular archway just right. Most people would have given up after thirty minutes. But I'd learned that the best shots live just beyond the point where most people stop waiting.
-
-This applies to so much more than photography. In relationships, we want connection to be instant. In careers, we want recognition now. But the most meaningful things — a career you love, a skill mastered, a relationship deepened — take time.
-
-Your camera is a teacher in patience, in presence, and in learning to see beauty in ordinary moments.">
-      <div class="bc-thumb" style="background:linear-gradient(135deg,#d3e6f5,#a0c9e8)"><i class="fa-solid fa-camera"></i></div>
-      <div class="bc-body">
-        <span class="btag">Photography</span>
-        <h3 class="bc-title">What My Camera Taught Me About Patience</h3>
-        <p class="bc-exc">Great shots rarely happen instantly. They're earned through waiting, watching, and learning to see the world differently...</p>
-        <div class="bc-meta">
-          <span><i class="fa-regular fa-calendar"></i> Jan 30, 2026</span>
-          <span><i class="fa-regular fa-clock"></i> 4 min read</span>
-        </div>
-        <div class="bc-likebar">
-          <button class="like-btn bc-like-btn" data-like-id="blog:what-my-camera-taught-me-about-patience" onclick="toggleLike(this)" aria-label="Like this post" title="Like"><i class="fa-solid fa-heart"></i><span class="like-count">0</span></button>
-          <a href="#" class="bc-more" onclick="openBlogModal(this.closest('article'));return false;">Read more <i class="fa-solid fa-arrow-right"></i></a>
-      </div>
-      </div>
-    </article>
-    <article class="bc reveal"
-      data-tag="Travel"
-      data-title="Hidden Gems: Towns You'll Never Find on Lists" data-img=""
-      data-date="Jan 10, 2026" data-read="8 min read"
-      data-bg="linear-gradient(135deg,#e6f5d3,#c9e8a0)" data-icon="fa-map-location-dot"
-      data-content="Every traveler dreams of discovering places untouched by tourism. Here are five of my most cherished off-the-radar destinations.
-
-The first is a small fishing village on the coast of Portugal — no tour buses, no Instagram influencers. Just cobblestones, salt air, and a bakery that opens at 6am.
-
-The second is a mountain town in northern Sri Lanka where the mist rolls in every morning and the tea estate stretches for miles. I spent four days there and barely saw another foreigner.
-
-What makes these places special isn't just their beauty — it's the feeling of discovery. Of being somewhere that hasn't yet been packaged and sold.
-
-My advice: skip the top-ten lists. Ask locals. Take the unmarked road. Accept invitations from strangers. The best places aren't in any guidebook — they're found through curiosity and a willingness to get a little lost.
-
-The world is much bigger, and much quieter, than the internet would have you believe.">
-      <div class="bc-thumb" style="background:linear-gradient(135deg,#e6f5d3,#c9e8a0)"><i class="fa-solid fa-map-location-dot"></i></div>
-      <div class="bc-body">
-        <span class="btag">Travel</span>
-        <h3 class="bc-title">Hidden Gems: Towns You'll Never Find on Lists</h3>
-        <p class="bc-exc">Every traveler dreams of discovering places untouched by tourism. Here are five of my most cherished off-the-radar destinations...</p>
-        <div class="bc-meta">
-          <span><i class="fa-regular fa-calendar"></i> Jan 10, 2026</span>
-          <span><i class="fa-regular fa-clock"></i> 8 min read</span>
-        </div>
-        <div class="bc-likebar">
-          <button class="like-btn bc-like-btn" data-like-id="blog:hidden-gems-towns-you-ll-never-find-on-lists" onclick="toggleLike(this)" aria-label="Like this post" title="Like"><i class="fa-solid fa-heart"></i><span class="like-count">0</span></button>
-          <a href="#" class="bc-more" onclick="openBlogModal(this.closest('article'));return false;">Read more <i class="fa-solid fa-arrow-right"></i></a>
-      </div>
-      </div>
-    </article>
-    <article class="bc reveal"
-      data-tag="Reflection"
-      data-title="Books That Changed the Way I See People" data-img=""
-      data-date="Dec 22, 2025" data-read="5 min read"
-      data-bg="linear-gradient(135deg,#f5d3e6,#e8a0c9)" data-icon="fa-book-open"
-      data-content="A short list of reads that expanded my empathy, challenged my assumptions, and made me a better listener.
-
-The first book I'd recommend is one about the hidden emotional lives of strangers — how little we actually know about the people around us, and how dangerous our assumptions can be.
-
-The second changed how I think about conversation. Most of us listen to reply, not to understand. The book showed me what it means to truly hear someone — to hold space for their reality without rushing to fix or judge.
-
-The third was a memoir that taught me vulnerability is not weakness. The author shared their most difficult moments with a courage that made me reflect on how guarded I'd been in my own relationships.
-
-These books didn't teach me facts. They taught me how to feel — more accurately, more generously, more humanly.
-
-If you want to become kinder and more connected, start with the books that challenge you to see the world from eyes that aren't your own.">
-      <div class="bc-thumb" style="background:linear-gradient(135deg,#f5d3e6,#e8a0c9)"><i class="fa-solid fa-book-open"></i></div>
-      <div class="bc-body">
-        <span class="btag">Reflection</span>
-        <h3 class="bc-title">Books That Changed the Way I See People</h3>
-        <p class="bc-exc">A short list of reads that expanded my empathy, challenged my assumptions, and made me a better listener...</p>
-        <div class="bc-meta">
-          <span><i class="fa-regular fa-calendar"></i> Dec 22, 2025</span>
-          <span><i class="fa-regular fa-clock"></i> 5 min read</span>
-        </div>
-        <div class="bc-likebar">
-          <button class="like-btn bc-like-btn" data-like-id="blog:books-that-changed-the-way-i-see-people" onclick="toggleLike(this)" aria-label="Like this post" title="Like"><i class="fa-solid fa-heart"></i><span class="like-count">0</span></button>
-          <a href="#" class="bc-more" onclick="openBlogModal(this.closest('article'));return false;">Read more <i class="fa-solid fa-arrow-right"></i></a>
-      </div>
-      </div>
-    </article>
+  <div class="blog-grid" id="blogGrid">
+    <p style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px 0;">Loading posts…</p>
   </div>
 </section>
 
@@ -1437,7 +1245,11 @@ If you want to become kinder and more connected, start with the books that chall
 <div class="g-modal-overlay" id="galleryModal" onclick="if(event.target===this)closeGalleryModal()">
   <div class="g-modal" style="position:relative;">
     <button class="g-modal-close" onclick="closeGalleryModal()" aria-label="Close" title="Close"><i class="fa-solid fa-xmark"></i></button>
-    <div class="g-modal-thumb" id="gModalThumb"></div>
+    <div class="g-modal-thumb" id="gModalThumb" style="position:relative;">
+      <button class="g-modal-nav g-modal-nav--prev" id="gModalPrev" onclick="gModalNav(-1)" aria-label="Previous photo" style="display:none;"><i class="fa-solid fa-chevron-left"></i></button>
+      <button class="g-modal-nav g-modal-nav--next" id="gModalNext" onclick="gModalNav(1)" aria-label="Next photo" style="display:none;"><i class="fa-solid fa-chevron-right"></i></button>
+    </div>
+    <div class="g-modal-dots" id="gModalDots" style="display:none;"></div>
     <div class="g-modal-body">
       <div class="g-modal-headrow">
         <div>
@@ -1448,9 +1260,6 @@ If you want to become kinder and more connected, start with the books that chall
           <i class="fa-brands fa-pinterest"></i> See more on Pinterest
         </a>
       </div>
-      <button class="like-btn modal-like-btn" id="gModalLikeBtn" onclick="toggleLike(this)" aria-label="Like this photo" title="Like">
-        <i class="fa-solid fa-heart"></i> <span>Like</span> <span class="like-count">0</span>
-      </button>
     </div>
   </div>
 </div>
@@ -1464,9 +1273,6 @@ If you want to become kinder and more connected, start with the books that chall
       <span class="btag" id="bModalTag"></span>
       <h2 id="bModalTitle"></h2>
       <div class="bc-meta" id="bModalMeta"></div>
-      <button class="like-btn modal-like-btn" id="bModalLikeBtn" onclick="toggleLike(this)" aria-label="Like this post" title="Like">
-        <i class="fa-solid fa-heart"></i> <span>Like</span> <span class="like-count">0</span>
-      </button>
       <div class="post-content" id="bModalContent"></div>
     </div>
   </div>
@@ -1578,6 +1384,10 @@ If you want to become kinder and more connected, start with the books that chall
 
   document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
 
+  /* Load dynamic gallery + blog content from the admin panel */
+  loadGalleryItems();
+  loadBlogPosts();
+
   /* CONTACT FORM */
   document.getElementById('theForm').addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -1659,166 +1469,156 @@ If you want to become kinder and more connected, start with the books that chall
     }
   }
 
-  /* GALLERY POPUP */
-  // Default cover used whenever a gallery item has no dedicated cover photo.
+  /* ══════════════════════════════════════════════════════════════
+     DYNAMIC GALLERY (photo posts) — loaded from the admin panel
+  ══════════════════════════════════════════════════════════════ */
   const DEFAULT_GALLERY_COVER = 'images/cover-images/default-cover.jpg';
+  let gModalImages = [];
+  let gModalIndex = 0;
 
-  /* COVER PHOTOS ON THE GRID CARDS (gallery tiles + blog thumbnails)
-     Each card's existing gradient + icon is its default cover. If a real
-     cover-photo path is set in data-img and the file loads successfully,
-     it replaces the default. If data-img is empty, or the file can't be
-     found (e.g. removed), the card automatically falls back to/stays on
-     its default gradient + icon cover — no extra step needed. */
-  function applyCardCoverPhoto(card, thumbEl, useSharedDefault) {
-    const src = card.dataset.img;
-    if (!src) return; // no cover uploaded — keep the default cover as-is
-    const probe = new Image();
-    probe.onload = function () {
-      thumbEl.style.backgroundImage = `url("${src}")`;
-      thumbEl.style.backgroundSize = 'cover';
-      thumbEl.style.backgroundPosition = 'center';
-      thumbEl.classList.add('has-cover-photo');
-    };
-    probe.onerror = function () {
-      // Upload missing/removed — leave the default gradient + icon cover in place.
-      if (useSharedDefault) {
-        thumbEl.style.backgroundImage = `url("${DEFAULT_GALLERY_COVER}")`;
-        thumbEl.style.backgroundSize = 'cover';
-        thumbEl.style.backgroundPosition = 'center';
+  function escAttr(s) { return String(s || '').replace(/"/g, '&quot;'); }
+  function escHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = String(s || '');
+    return d.innerHTML;
+  }
+
+  async function loadGalleryItems() {
+    const grid = document.getElementById('galleryGrid');
+    try {
+      const res = await fetch('/api/gallery-items');
+      const data = await res.json();
+      if (!data.success || !data.items.length) {
+        grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px 0;">No photo posts yet — check back soon!</p>';
+        return;
       }
-    };
-    probe.src = src;
+      grid.innerHTML = data.items.map(it => {
+        const layoutClass = it.layout === 'tall' ? ' g-item--tall' : it.layout === 'wide' ? ' g-item--wide' : '';
+        return `
+      <div class="g-item${layoutClass} reveal" data-c="${escAttr(it.filterKey)}" onclick="openGalleryModal(this)"
+        data-id="${it.id}" data-title="${escAttr(it.title)}" data-images='${escAttr(JSON.stringify(it.images))}'
+        data-pin="${escAttr(it.pinterestUrl)}" data-cat="${escAttr(it.category)}"
+        data-bg="${escAttr(it.bg)}" data-icon="${escAttr(it.icon)}">
+        <div class="g-ph" style="background:${it.bg}"><i class="fa-solid ${it.icon}"></i><span>${escHtml(it.title)}</span></div>
+        <div class="g-ov"><p>${escHtml(it.title)}</p><span>${escHtml(it.category)}</span></div>
+      </div>`;
+      }).join('');
+      document.querySelectorAll('#galleryGrid .reveal').forEach(el => obs.observe(el));
+    } catch (e) {
+      grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px 0;">Couldn\'t load the gallery right now.</p>';
+    }
   }
-  document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.g-item').forEach(item => {
-      applyCardCoverPhoto(item, item.querySelector('.g-ph'), true);
-    });
-    document.querySelectorAll('.bc').forEach(card => {
-      applyCardCoverPhoto(card, card.querySelector('.bc-thumb'), false);
-    });
-  });
-
-  /* ============================================================
-     LIKE BUTTONS (photo posts + blog posts)
-     Likes persist in the browser (localStorage) so they survive a
-     refresh. Every like-button that shares the same data-like-id
-     (grid tile + its popup) stays in sync automatically.
-     ============================================================ */
-  const LIKES_STORAGE_KEY = 'cn_liked_posts';
-
-  function getLikedIds() {
-    try { return new Set(JSON.parse(localStorage.getItem(LIKES_STORAGE_KEY)) || []); }
-    catch (e) { return new Set(); }
-  }
-  function saveLikedIds(set) {
-    try { localStorage.setItem(LIKES_STORAGE_KEY, JSON.stringify(Array.from(set))); }
-    catch (e) { /* localStorage unavailable — likes just won't persist */ }
-  }
-  function setLikeButtonState(btn, liked) {
-    btn.classList.toggle('liked', liked);
-    const countEl = btn.querySelector('.like-count');
-    if (countEl) countEl.textContent = liked ? '1' : '0';
-  }
-  function toggleLike(btn) {
-    const id = btn.dataset.likeId;
-    if (!id) return;
-    const liked = getLikedIds();
-    const nowLiked = !liked.has(id);
-    if (nowLiked) liked.add(id); else liked.delete(id);
-    saveLikedIds(liked);
-    // Keep every button referencing this same post (grid tile + its popup) in sync.
-    document.querySelectorAll(`.like-btn[data-like-id="${CSS.escape(id)}"]`).forEach(b => setLikeButtonState(b, nowLiked));
-  }
-  function initLikeButtons() {
-    const liked = getLikedIds();
-    document.querySelectorAll('.like-btn[data-like-id]').forEach(btn => {
-      setLikeButtonState(btn, liked.has(btn.dataset.likeId));
-    });
-  }
-  document.addEventListener('DOMContentLoaded', initLikeButtons);
 
   function openGalleryModal(el) {
     const thumb = document.getElementById('gModalThumb');
-    const coverSrc = el.dataset.img || DEFAULT_GALLERY_COVER;
-
-    thumb.classList.remove('g-orient-landscape', 'g-orient-portrait');
-    thumb.style.background = '#fff';
-
-    if (coverSrc) {
-      // Load the photo first so we know its natural orientation before showing it,
-      // then size the white card to fit landscape or portrait automatically.
-      const probe = new Image();
-      probe.onload = function () {
-        const isPortrait = probe.naturalHeight > probe.naturalWidth;
-        thumb.classList.add(isPortrait ? 'g-orient-portrait' : 'g-orient-landscape');
-      };
-      probe.onerror = function () {
-        // Photo failed to load (e.g. missing file) — fall back to the icon placeholder.
-        thumb.style.background = el.dataset.bg || '#fff';
-        thumb.innerHTML = `<i class="fa-solid ${el.dataset.icon}" style="font-size:64px;color:rgba(255,255,255,.75);"></i>`;
-      };
-      probe.src = coverSrc;
-      thumb.innerHTML = `<img class="g-modal-img" src="${coverSrc}" alt="${el.dataset.title}">`;
-    } else {
-      thumb.style.background = el.dataset.bg || '#fff';
-      thumb.innerHTML = `<i class="fa-solid ${el.dataset.icon}" style="font-size:64px;color:rgba(255,255,255,.75);"></i>`;
-    }
+    let images = [];
+    try { images = JSON.parse(el.dataset.images || '[]'); } catch { images = []; }
+    if (!images.length) images = [DEFAULT_GALLERY_COVER];
+    gModalImages = images;
+    gModalIndex = 0;
 
     document.getElementById('gModalTitle').textContent = el.dataset.title;
     document.getElementById('gModalCat').textContent = el.dataset.cat;
-
-    const gLikeBtn = document.getElementById('gModalLikeBtn');
-    const gTileLikeBtn = el.querySelector('.g-like-btn');
-    if (gTileLikeBtn) {
-      gLikeBtn.dataset.likeId = gTileLikeBtn.dataset.likeId;
-      setLikeButtonState(gLikeBtn, getLikedIds().has(gTileLikeBtn.dataset.likeId));
-    }
-
     const pinBtn = document.getElementById('gModalPinterestBtn');
     pinBtn.href = el.dataset.pin || 'https://www.pinterest.com/demoprofile/';
 
+    const multi = gModalImages.length > 1;
+    document.getElementById('gModalPrev').style.display = multi ? 'flex' : 'none';
+    document.getElementById('gModalNext').style.display = multi ? 'flex' : 'none';
+    const dotsWrap = document.getElementById('gModalDots');
+    dotsWrap.style.display = multi ? 'flex' : 'none';
+    dotsWrap.innerHTML = multi ? gModalImages.map((_, i) => `<button class="dot${i === 0 ? ' active' : ''}" onclick="gModalGoTo(${i})" aria-label="Photo ${i + 1}"></button>`).join('') : '';
+
+    renderGModalImage(thumb);
+
     document.getElementById('galleryModal').classList.add('open');
     document.body.style.overflow = 'hidden';
+
+    // Fire-and-forget view counter — doesn't block the UI.
+    if (el.dataset.id) fetch('/api/gallery-items/' + el.dataset.id + '/view', { method: 'POST' }).catch(() => {});
   }
+
+  function renderGModalImage(thumbEl) {
+    const thumb = thumbEl || document.getElementById('gModalThumb');
+    thumb.classList.remove('g-orient-landscape', 'g-orient-portrait');
+    const src = gModalImages[gModalIndex];
+    const probe = new Image();
+    probe.onload = function () {
+      const isPortrait = probe.naturalHeight > probe.naturalWidth;
+      thumb.classList.add(isPortrait ? 'g-orient-portrait' : 'g-orient-landscape');
+    };
+    probe.src = src;
+    const img = document.createElement('img');
+    img.className = 'g-modal-img';
+    img.src = src;
+    img.alt = document.getElementById('gModalTitle').textContent;
+    // Clear only the <img>, keep the nav buttons that live in the same container
+    Array.from(thumb.querySelectorAll('img')).forEach(n => n.remove());
+    thumb.appendChild(img);
+    document.querySelectorAll('#gModalDots .dot').forEach((d, i) => d.classList.toggle('active', i === gModalIndex));
+  }
+
+  function gModalNav(dir) {
+    if (gModalImages.length < 2) return;
+    gModalIndex = (gModalIndex + dir + gModalImages.length) % gModalImages.length;
+    renderGModalImage();
+  }
+  function gModalGoTo(i) {
+    gModalIndex = i;
+    renderGModalImage();
+  }
+
   function closeGalleryModal() {
     document.getElementById('galleryModal').classList.remove('open');
     document.body.style.overflow = '';
   }
 
+  /* ══════════════════════════════════════════════════════════════
+     DYNAMIC BLOG (blog posts) — loaded from the admin panel
+  ══════════════════════════════════════════════════════════════ */
+  async function loadBlogPosts() {
+    const grid = document.getElementById('blogGrid');
+    try {
+      const res = await fetch('/api/blog-posts');
+      const data = await res.json();
+      if (!data.success || !data.posts.length) {
+        grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px 0;">No blog posts yet — check back soon!</p>';
+        return;
+      }
+      grid.innerHTML = data.posts.map(p => `
+      <article class="bc${p.featured ? ' bc--feat' : ''} reveal"
+        data-id="${p.id}" data-tag="${escAttr(p.tag)}" data-title="${escAttr(p.title)}"
+        data-date="${escAttr(p.date)}" data-read="${escAttr(p.read)}"
+        data-bg="${escAttr(p.bg)}" data-icon="${escAttr(p.icon)}" data-cover="${escAttr(p.coverImage)}"
+        data-content="${escAttr(p.content)}">
+        <div class="bc-thumb" style="background:${p.bg}"><i class="fa-solid ${p.icon}"></i></div>
+        <div class="bc-body">
+          <span class="btag">${escHtml(p.tag)}</span>
+          <h3 class="bc-title">${escHtml(p.title)}</h3>
+          <p class="bc-exc">${escHtml(p.excerpt)}</p>
+          <div class="bc-meta">
+            <span><i class="fa-regular fa-calendar"></i> ${escHtml(p.date)}</span>
+            <span><i class="fa-regular fa-clock"></i> ${escHtml(p.read)}</span>
+          </div>
+          <a href="#" class="bc-more" onclick="openBlogModal(this.closest('article'));return false;">Read more <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+      </article>`).join('');
+      document.querySelectorAll('#blogGrid .reveal').forEach(el => obs.observe(el));
+    } catch (e) {
+      grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px 0;">Couldn\'t load the blog right now.</p>';
+    }
+  }
+
   /* BLOG POST POPUP */
   function openBlogModal(article) {
     const hero = document.getElementById('bModalHero');
-    const coverSrc = article.dataset.img; // left blank by default — set a real path later to override the default cover
-    hero.classList.remove('bh-orient-landscape', 'bh-orient-portrait');
-
-    function showDefaultCover() {
+    if (article.dataset.cover) {
+      hero.style.background = '#fff';
+      hero.innerHTML = `<img src="${article.dataset.cover}" alt="${article.dataset.title}" style="width:100%;height:100%;object-fit:cover;display:block;">`;
+    } else {
       hero.style.background = article.dataset.bg;
       hero.innerHTML = `<i class="fa-solid ${article.dataset.icon}" style="font-size:64px;color:rgba(255,255,255,.75);"></i>`;
     }
-
-    if (coverSrc) {
-      // A cover photo has been uploaded for this post — load it first so we know
-      // its orientation, then display it in place of the default gradient cover.
-      const probe = new Image();
-      probe.onload = function () {
-        const isPortrait = probe.naturalHeight > probe.naturalWidth;
-        hero.style.background = '#fff';
-        hero.classList.add(isPortrait ? 'bh-orient-portrait' : 'bh-orient-landscape');
-        hero.innerHTML = `<img class="bh-img" src="${coverSrc}" alt="${article.dataset.title}">`;
-      };
-      probe.onerror = showDefaultCover; // upload removed/missing — automatically revert to default
-      probe.src = coverSrc;
-    } else {
-      showDefaultCover();
-    }
-
-    const bLikeBtn = document.getElementById('bModalLikeBtn');
-    const bCardLikeBtn = article.querySelector('.bc-like-btn');
-    if (bCardLikeBtn) {
-      bLikeBtn.dataset.likeId = bCardLikeBtn.dataset.likeId;
-      setLikeButtonState(bLikeBtn, getLikedIds().has(bCardLikeBtn.dataset.likeId));
-    }
-
     document.getElementById('bModalTag').textContent = article.dataset.tag;
     document.getElementById('bModalTitle').textContent = article.dataset.title;
     document.getElementById('bModalMeta').innerHTML =
@@ -1830,6 +1630,9 @@ If you want to become kinder and more connected, start with the books that chall
     modal.classList.add('open');
     document.body.style.overflow = 'hidden';
     modal.querySelector('.blog-modal').scrollTop = 0;
+
+    // Fire-and-forget view counter — doesn't block the UI.
+    if (article.dataset.id) fetch('/api/blog-posts/' + article.dataset.id + '/view', { method: 'POST' }).catch(() => {});
   }
   function closeBlogModal() {
     document.getElementById('blogModal').classList.remove('open');
