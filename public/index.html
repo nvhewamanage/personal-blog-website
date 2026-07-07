@@ -1520,7 +1520,12 @@
     document.getElementById('gModalTitle').textContent = el.dataset.title;
     document.getElementById('gModalCat').textContent = el.dataset.cat;
     const pinBtn = document.getElementById('gModalPinterestBtn');
-    pinBtn.href = el.dataset.pin || 'https://www.pinterest.com/demoprofile/';
+    if (el.dataset.pin) {
+      pinBtn.href = el.dataset.pin;
+      pinBtn.style.display = '';
+    } else {
+      pinBtn.style.display = 'none';
+    }
 
     const multi = gModalImages.length > 1;
     document.getElementById('gModalPrev').style.display = multi ? 'flex' : 'none';

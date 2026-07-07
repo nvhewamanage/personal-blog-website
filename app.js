@@ -141,6 +141,20 @@ function tsToIso(ts) {
 
 function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
+// A "photo" on a Photo Post can come from local disk (uploaded file) OR be a
+// direct link to an image hosted on Pinterest. This validates the latter so
+// only genuine Pinterest-hosted image URLs are accepted (not just any link).
+function isPinterestImageUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  try {
+    const u = new URL(url);
+    if (!/^https?:$/.test(u.protocol)) return false;
+    return /(^|\.)pinimg\.com$/i.test(u.hostname) || /(^|\.)pinterest\.[a-z.]+$/i.test(u.hostname);
+  } catch {
+    return false;
+  }
+}
+
 // Records who did what and when — powers the Activity Log tab in the admin panel.
 async function logActivity(action, entityType, entityId, entityTitle, actor, details = '') {
   try {
@@ -857,7 +871,12 @@ function serializeGalleryItem(doc) {
     title: d.title || '',
     category: d.category || 'Travel',
     layout: d.layout || 'normal',
-    images: d.images || [],
+    // Normalize older records (saved before mixed sources existed) to source: 'upload'
+    images: (d.images || []).map(im => ({
+      url: im.url,
+      filename: im.filename || null,
+      source: im.source || 'upload',
+    })),
     description: d.description || '',
     tags: d.tags || [],
     pinterestUrl: d.pinterestUrl || '',
@@ -884,16 +903,42 @@ app.get('/admin/gallery-items', authMiddleware, async (req, res) => {
   }
 });
 
-// Create a photo post — multipart form, up to 10 images.
+// Create a photo post — multipart form. Photos can be uploaded files and/or
+// direct Pinterest image links, mixed freely, up to 10 total. `imageOrder`
+// (JSON array of {type:'new'} | {type:'pinterest', url}) describes the final
+// ordering the admin composed in the UI; the first entry is the cover photo.
 app.post('/admin/gallery-items', authMiddleware, galleryUpload.array('images', 10), async (req, res) => {
   try {
-    const { title, category, layout, description, tags, pinterestUrl, status, publishAt } = req.body;
+    const { title, category, layout, description, tags, pinterestUrl, status, publishAt, imageOrder } = req.body;
     if (!title || !title.trim())
       return res.status(400).json({ success: false, error: 'Title is required.' });
 
-    const images = (req.files || []).map(f => ({ url: `/images/uploads/gallery/${f.filename}`, filename: f.filename }));
+    const uploadedFiles = (req.files || []).map(f => ({ url: `/images/uploads/gallery/${f.filename}`, filename: f.filename, source: 'upload' }));
+
+    let images = [];
+    if (imageOrder) {
+      let order = [];
+      try { order = JSON.parse(imageOrder); } catch { order = []; }
+      let uploadIdx = 0;
+      for (const token of order) {
+        if (!token) continue;
+        if (token.type === 'new') {
+          if (uploadedFiles[uploadIdx]) images.push(uploadedFiles[uploadIdx]);
+          uploadIdx++;
+        } else if (token.type === 'pinterest' && isPinterestImageUrl(token.url)) {
+          images.push({ url: token.url, filename: null, source: 'pinterest' });
+        }
+      }
+      // Safety net: include any uploaded files the client didn't reference in imageOrder.
+      if (uploadIdx < uploadedFiles.length) images = images.concat(uploadedFiles.slice(uploadIdx));
+    } else {
+      images = uploadedFiles;
+    }
+
     if (images.length === 0)
-      return res.status(400).json({ success: false, error: 'At least one image is required.' });
+      return res.status(400).json({ success: false, error: 'At least one photo is required — upload a file or add a Pinterest image link.' });
+    if (images.length > 10)
+      return res.status(400).json({ success: false, error: 'Max 10 images per photo post.' });
 
     const finalStatus = status === 'scheduled' && publishAt ? 'scheduled' : (status === 'published' ? 'published' : 'draft');
     const actor = req.admin?.username || 'admin';
@@ -923,8 +968,13 @@ app.post('/admin/gallery-items', authMiddleware, galleryUpload.array('images', 1
   }
 });
 
-// Edit a photo post — can append new images and/or remove existing ones
-// (pass removeImages as a JSON array of filenames in the form body).
+// Edit a photo post — photos can be a mix of uploaded files and Pinterest
+// image links. `imageOrder` (JSON array of {type:'existing', filename} |
+// {type:'new'} | {type:'pinterest', url}) describes the final composition
+// and order the admin arranged in the UI; anything dropped from that order
+// is treated as removed (and its file deleted from disk, if any).
+// `removeImages` (legacy JSON array of filenames) is still honored as a
+// fallback when imageOrder isn't sent.
 app.put('/admin/gallery-items/:id', authMiddleware, galleryUpload.array('images', 10), async (req, res) => {
   try {
     const docRef = db.collection('gallery_items').doc(req.params.id);
@@ -933,22 +983,60 @@ app.put('/admin/gallery-items/:id', authMiddleware, galleryUpload.array('images'
     const existing = doc.data();
     const actor = req.admin?.username || 'admin';
 
-    const { title, category, layout, description, tags, pinterestUrl, status, publishAt, removeImages } = req.body;
+    const { title, category, layout, description, tags, pinterestUrl, status, publishAt, imageOrder, removeImages } = req.body;
 
-    let images = existing.images || [];
-    if (removeImages) {
-      let toRemove = [];
-      try { toRemove = JSON.parse(removeImages); } catch { toRemove = []; }
-      for (const filename of toRemove) {
-        await fsPromises.unlink(path.join(UPLOAD_DIRS.gallery, filename)).catch(() => {});
+    const existingImages = existing.images || [];
+    const uploadedFiles = (req.files || []).map(f => ({ url: `/images/uploads/gallery/${f.filename}`, filename: f.filename, source: 'upload' }));
+
+    let images;
+    if (imageOrder) {
+      const existingByFilename = {};
+      existingImages.forEach(im => { if (im.filename) existingByFilename[im.filename] = im; });
+
+      let order = [];
+      try { order = JSON.parse(imageOrder); } catch { order = []; }
+
+      images = [];
+      let uploadIdx = 0;
+      for (const token of order) {
+        if (!token) continue;
+        if (token.type === 'existing' && existingByFilename[token.filename]) {
+          images.push(existingByFilename[token.filename]);
+        } else if (token.type === 'new') {
+          if (uploadedFiles[uploadIdx]) images.push(uploadedFiles[uploadIdx]);
+          uploadIdx++;
+        } else if (token.type === 'pinterest' && isPinterestImageUrl(token.url)) {
+          images.push({ url: token.url, filename: null, source: 'pinterest' });
+        }
       }
-      images = images.filter(im => !toRemove.includes(im.filename));
+      // Safety net: include any uploaded files the client didn't reference.
+      if (uploadIdx < uploadedFiles.length) images = images.concat(uploadedFiles.slice(uploadIdx));
+
+      // Delete local files for any existing images that were dropped from the order.
+      const keptFilenames = new Set(images.filter(im => im.filename).map(im => im.filename));
+      for (const im of existingImages) {
+        if (im.filename && !keptFilenames.has(im.filename)) {
+          await fsPromises.unlink(path.join(UPLOAD_DIRS.gallery, im.filename)).catch(() => {});
+        }
+      }
+    } else {
+      // Legacy path (no imageOrder sent): keep existing behavior.
+      images = existingImages;
+      if (removeImages) {
+        let toRemove = [];
+        try { toRemove = JSON.parse(removeImages); } catch { toRemove = []; }
+        for (const filename of toRemove) {
+          await fsPromises.unlink(path.join(UPLOAD_DIRS.gallery, filename)).catch(() => {});
+        }
+        images = images.filter(im => !toRemove.includes(im.filename));
+      }
+      images = images.concat(uploadedFiles);
     }
-    const newImages = (req.files || []).map(f => ({ url: `/images/uploads/gallery/${f.filename}`, filename: f.filename }));
-    images = images.concat(newImages);
 
     if (images.length === 0)
-      return res.status(400).json({ success: false, error: 'A photo post needs at least one image.' });
+      return res.status(400).json({ success: false, error: 'A photo post needs at least one photo — upload a file or add a Pinterest image link.' });
+    if (images.length > 10)
+      return res.status(400).json({ success: false, error: 'Max 10 images per photo post.' });
 
     const finalStatus = status === 'scheduled' && publishAt ? 'scheduled' : (status === 'published' ? 'published' : (status === 'draft' ? 'draft' : existing.status));
 
@@ -982,7 +1070,8 @@ app.delete('/admin/gallery-items/:id', authMiddleware, async (req, res) => {
     if (!doc.exists) return res.status(404).json({ success: false, error: 'Not found.' });
     const data = doc.data();
     for (const img of (data.images || [])) {
-      await fsPromises.unlink(path.join(UPLOAD_DIRS.gallery, img.filename)).catch(() => {});
+      // Pinterest-linked photos have no local file to clean up.
+      if (img.filename) await fsPromises.unlink(path.join(UPLOAD_DIRS.gallery, img.filename)).catch(() => {});
     }
     await docRef.delete();
     await logActivity('delete', 'gallery_item', req.params.id, data.title, req.admin?.username || 'admin', 'Deleted permanently');

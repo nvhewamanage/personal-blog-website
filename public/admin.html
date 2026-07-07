@@ -413,6 +413,17 @@
       display: flex; align-items: center; justify-content: center;
     }
     .img-upload-item .rm-btn:hover { background: var(--accent); }
+    .img-src-badge {
+      position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%;
+      background: rgba(230,0,35,.85); color: #fff; font-size: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .img-cover-badge {
+      position: absolute; bottom: 0; left: 0; right: 0; padding: 2px 0; text-align: center;
+      background: rgba(0,0,0,.55); color: #fff; font-size: 9px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
+    }
+    .pinterest-add-row { display: flex; gap: 8px; margin-top: 10px; }
+    .pinterest-add-row input { flex: 1; }
     .upload-drop {
       border: 2px dashed var(--border); border-radius: 12px; padding: 20px; text-align: center;
       color: var(--muted); font-size: 13px; cursor: pointer; transition: border-color var(--ease), background var(--ease);
@@ -719,16 +730,22 @@
             <textarea id="ppDescription" rows="2" placeholder="Short internal description…"></textarea>
           </div>
           <div class="fg">
-            <label class="fl">Pinterest URL</label>
+            <label class="fl">Pinterest Pin Link <span style="font-weight:400;color:var(--muted);">(optional — adds a "See more on Pinterest" button on the post)</span></label>
             <input type="url" id="ppPinterest" placeholder="https://www.pinterest.com/pin/…">
           </div>
           <div class="fg">
-            <label class="fl">Photos <span style="color:var(--accent);">*</span> <span style="font-weight:400;color:var(--muted);">(up to 10 — first image is the cover)</span></label>
+            <label class="fl">Photos <span style="color:var(--accent);">*</span> <span style="font-weight:400;color:var(--muted);">(up to 10 total — mix uploaded photos and Pinterest image links freely — first one is the cover)</span></label>
             <div class="upload-drop" onclick="document.getElementById('ppFileInput').click()">
               <i class="fa-solid fa-cloud-arrow-up" style="font-size:20px;display:block;margin-bottom:6px;"></i>
               Click to choose images, or drop them here
             </div>
             <input type="file" id="ppFileInput" accept="image/*" multiple style="display:none;" onchange="handlePpFilesSelected(this.files)">
+            <div class="pinterest-add-row">
+              <input type="url" id="ppPinterestImageInput" placeholder="Paste a Pinterest image link (e.g. https://i.pinimg.com/…)">
+              <button type="button" class="btn btn-outline" onclick="addPpPinterestImage()" style="white-space:nowrap;padding:9px 14px;font-size:13px;">
+                <i class="fa-brands fa-pinterest"></i> Add Photo
+              </button>
+            </div>
             <div class="img-upload-grid" id="ppImagePreview"></div>
           </div>
           <div class="fg">
@@ -1503,9 +1520,12 @@
   //  PHOTO POSTS
   // ═══════════════════════════════════════════════════════════════
   let allPhotoPosts = [];
-  let ppSelectedFiles = [];
-  let ppExistingImages = [];
-  let ppRemovedImages = [];
+  // Unified ordered list of photos for the modal currently open. Each entry is one of:
+  //   { kind: 'existing',  filename, url }  — already saved, uploaded photo
+  //   { kind: 'new',       file }           — freshly chosen local file, not yet uploaded
+  //   { kind: 'pinterest', url }            — direct link to a Pinterest-hosted image
+  // Order in this array = order shown/saved; index 0 is the cover photo.
+  let ppImages = [];
   let pendingDeletePpId = null;
 
   async function loadPhotoPosts() {
@@ -1545,7 +1565,7 @@
   }
 
   function openPhotoPostModal(id) {
-    ppSelectedFiles = []; ppExistingImages = []; ppRemovedImages = [];
+    ppImages = [];
     document.getElementById('ppId').value = id || '';
     document.getElementById('ppModalTitle').innerHTML = id
       ? '<i class="fa-solid fa-pen" style="color:var(--accent);"></i> Edit Photo Post'
@@ -1560,7 +1580,10 @@
       document.getElementById('ppTags').value = (p.tags || []).join(', ');
       document.getElementById('ppDescription').value = p.description || '';
       document.getElementById('ppPinterest').value = p.pinterestUrl || '';
-      ppExistingImages = (p.images || []).slice();
+      // Rehydrate saved photos into unified state, keeping their source distinction.
+      ppImages = (p.images || []).map(im => im.source === 'pinterest'
+        ? { kind: 'pinterest', url: im.url }
+        : { kind: 'existing', filename: im.filename, url: im.url });
       setStatusRadio('ppStatusGroup', p.status, 'ppScheduleRow');
       document.getElementById('ppPublishAt').value = p.publishAt ? toLocalInputValue(p.publishAt) : '';
     } else {
@@ -1573,6 +1596,7 @@
       setStatusRadio('ppStatusGroup', 'draft', 'ppScheduleRow');
       document.getElementById('ppPublishAt').value = '';
     }
+    document.getElementById('ppPinterestImageInput').value = '';
     renderPpImagePreview();
     document.getElementById('photoPostModal').style.display = 'flex';
   }
@@ -1580,38 +1604,54 @@
 
   function handlePpFilesSelected(fileList) {
     const files = Array.from(fileList);
-    if (ppExistingImages.length + ppSelectedFiles.length + files.length > 10) {
+    if (ppImages.length + files.length > 10) {
       showToast('Max 10 images per photo post.', 'error');
       return;
     }
-    ppSelectedFiles = ppSelectedFiles.concat(files);
+    files.forEach(f => ppImages.push({ kind: 'new', file: f }));
     renderPpImagePreview();
     document.getElementById('ppFileInput').value = '';
   }
-  function renderPpImagePreview() {
-    const wrap = document.getElementById('ppImagePreview');
-    let html = '';
-    ppExistingImages.forEach(img => {
-      html += `<div class="img-upload-item"><img src="${img.url}"><button class="rm-btn" onclick="removePpExistingImage('${img.filename}')"><i class="fa-solid fa-xmark"></i></button></div>`;
-    });
-    ppSelectedFiles.forEach((f, i) => {
-      html += `<div class="img-upload-item"><img src="${URL.createObjectURL(f)}"><button class="rm-btn" onclick="removePpNewFile(${i})"><i class="fa-solid fa-xmark"></i></button></div>`;
-    });
-    wrap.innerHTML = html;
-  }
-  function removePpExistingImage(filename) {
-    ppRemovedImages.push(filename);
-    ppExistingImages = ppExistingImages.filter(im => im.filename !== filename);
+
+  // Adds a photo sourced directly from a Pinterest image link (e.g. i.pinimg.com),
+  // alongside any locally uploaded photos already queued for this post.
+  function addPpPinterestImage() {
+    const input = document.getElementById('ppPinterestImageInput');
+    const url = input.value.trim();
+    if (!url) return;
+    if (!/^https?:\/\//i.test(url) || !/(^|\.)pinimg\.com|(^|\.)pinterest\.[a-z.]+/i.test(url)) {
+      showToast('Enter a valid Pinterest image link (e.g. from i.pinimg.com).', 'error');
+      return;
+    }
+    if (ppImages.length >= 10) {
+      showToast('Max 10 images per photo post.', 'error');
+      return;
+    }
+    if (ppImages.some(img => img.kind === 'pinterest' && img.url === url)) {
+      showToast('That Pinterest photo is already added.', 'error');
+      return;
+    }
+    ppImages.push({ kind: 'pinterest', url });
+    input.value = '';
     renderPpImagePreview();
   }
-  function removePpNewFile(i) { ppSelectedFiles.splice(i, 1); renderPpImagePreview(); }
+
+  function renderPpImagePreview() {
+    const wrap = document.getElementById('ppImagePreview');
+    wrap.innerHTML = ppImages.map((img, i) => {
+      const src = img.kind === 'new' ? URL.createObjectURL(img.file) : img.url;
+      const srcBadge = img.kind === 'pinterest' ? '<span class="img-src-badge" title="From Pinterest"><i class="fa-brands fa-pinterest"></i></span>' : '';
+      const coverBadge = i === 0 ? '<span class="img-cover-badge">Cover</span>' : '';
+      return `<div class="img-upload-item">${srcBadge}${coverBadge}<img src="${src}"><button class="rm-btn" onclick="removePpImage(${i})"><i class="fa-solid fa-xmark"></i></button></div>`;
+    }).join('');
+  }
+  function removePpImage(i) { ppImages.splice(i, 1); renderPpImagePreview(); }
 
   async function savePhotoPost() {
     const id = document.getElementById('ppId').value;
     const title = document.getElementById('ppTitle').value.trim();
     if (!title) { showToast('Title is required.', 'error'); return; }
-    const totalImages = ppExistingImages.length + ppSelectedFiles.length;
-    if (totalImages === 0) { showToast('At least one image is required.', 'error'); return; }
+    if (ppImages.length === 0) { showToast('At least one photo is required — upload a file or add a Pinterest image link.', 'error'); return; }
 
     const status = document.querySelector('#ppStatusGroup input:checked').value;
     const publishAt = document.getElementById('ppPublishAt').value;
@@ -1626,8 +1666,17 @@
     fd.append('pinterestUrl', document.getElementById('ppPinterest').value);
     fd.append('status', status);
     if (status === 'scheduled') fd.append('publishAt', new Date(publishAt).toISOString());
-    ppSelectedFiles.forEach(f => fd.append('images', f));
-    if (id && ppRemovedImages.length) fd.append('removeImages', JSON.stringify(ppRemovedImages));
+
+    // Describe the final photo order/composition so the server can rebuild it —
+    // 'existing' references a saved upload by filename, 'new' consumes the next
+    // uploaded file in order, 'pinterest' carries the direct image link.
+    const order = ppImages.map(img => {
+      if (img.kind === 'existing') return { type: 'existing', filename: img.filename };
+      if (img.kind === 'pinterest') return { type: 'pinterest', url: img.url };
+      return { type: 'new' };
+    });
+    fd.append('imageOrder', JSON.stringify(order));
+    ppImages.filter(img => img.kind === 'new').forEach(img => fd.append('images', img.file));
 
     const btn = document.getElementById('ppSaveBtn');
     btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving…';
