@@ -8,6 +8,7 @@ const rateLimit    = require('express-rate-limit');
 const helmet       = require('helmet');
 const validator    = require('validator');
 const multer       = require('multer');
+const crypto       = require('crypto');
 const fs           = require('fs');
 const fsPromises   = require('fs').promises;
 const path         = require('path');
@@ -43,27 +44,23 @@ const loginLimiter = rateLimit({
 
 // ─── Middleware ────────────────────────────────────────────────
 app.use(express.static('public'));
-app.use('/images', express.static('images')); // serve root-level images folder
+app.use('/images', express.static('images')); // still serves any pre-migration local images
 app.use(express.json({ limit: '10kb' })); // Reject oversized bodies
 
 // ═══════════════════════════════════════════════════════════════
-//  IMAGE UPLOADS (local disk — /images/uploads/<gallery|blog>/)
+//  IMAGE UPLOADS
+//  Files are received into memory (not written to local disk) and then
+//  uploaded straight to Firebase Storage — see uploadBufferToStorage() below,
+//  defined after the Firebase Admin SDK is initialized.
+//
+//  UPLOAD_DIRS / the /images static route are kept only so any images saved
+//  to local disk *before* this migration keep working; nothing new is
+//  written there.
 const UPLOAD_DIRS = {
   gallery: path.join(__dirname, 'images', 'uploads', 'gallery'),
   blog:    path.join(__dirname, 'images', 'uploads', 'blog'),
 };
 Object.values(UPLOAD_DIRS).forEach(dir => fs.mkdirSync(dir, { recursive: true }));
-
-function makeStorage(kind) {
-  return multer.diskStorage({
-    destination: (req, file, cb) => cb(null, UPLOAD_DIRS[kind]),
-    filename: (req, file, cb) => {
-      const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
-      const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
-      cb(null, `${kind}-${unique}${ext}`);
-    },
-  });
-}
 
 const imageFileFilter = (req, file, cb) => {
   if (/^image\/(jpeg|jpg|png|webp|gif)$/.test(file.mimetype)) cb(null, true);
@@ -72,13 +69,13 @@ const imageFileFilter = (req, file, cb) => {
 
 // Photo posts: up to 10 images per post
 const galleryUpload = multer({
-  storage: makeStorage('gallery'),
+  storage: multer.memoryStorage(),
   limits: { fileSize: 8 * 1024 * 1024, files: 10 },
   fileFilter: imageFileFilter,
 });
 // Blog posts: single cover image
 const blogUpload = multer({
-  storage: makeStorage('blog'),
+  storage: multer.memoryStorage(),
   limits: { fileSize: 8 * 1024 * 1024, files: 1 },
   fileFilter: imageFileFilter,
 });
@@ -102,14 +99,51 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT) {
   }
 }
 
+// Set FIREBASE_STORAGE_BUCKET in your .env to the exact bucket name shown at
+// the top of Firebase Console → Storage (usually <project-id>.appspot.com or
+// <project-id>.firebasestorage.app). Falls back to the .appspot.com pattern
+// if not set, which is correct for most existing projects.
+const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || `${serviceAccount.project_id}.appspot.com`;
+
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  // If using Firebase Storage or Realtime DB, also add:
-  // databaseURL: `https://${process.env.FIREBASE_PROJECT_ID}.firebaseio.com`
+  storageBucket,
 });
 
-const db = admin.firestore();
+const db     = admin.firestore();
+const bucket = admin.storage().bucket();
 console.log('✅ Firebase / Firestore connected');
+console.log(`✅ Firebase Storage bucket: ${storageBucket}`);
+
+// Uploads a file buffer to Firebase Storage and returns a public download URL
+// (the same style of URL Firebase's client SDK getDownloadURL() produces).
+// This works even with default/locked-down Storage Security Rules, because
+// the Admin SDK write bypasses rules, and the token in the URL is verified
+// by Firebase's serving layer rather than by the rules themselves.
+async function uploadBufferToStorage(buffer, storagePath, contentType) {
+  const token = crypto.randomUUID();
+  const file  = bucket.file(storagePath);
+  await file.save(buffer, {
+    contentType,
+    resumable: false,
+    metadata: { metadata: { firebaseStorageDownloadTokens: token } },
+  });
+  return `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(storagePath)}?alt=media&token=${token}`;
+}
+
+// Deletes an image asset given whatever was stored as its "filename":
+//   - a Firebase Storage path (contains a "/", e.g. "gallery/172939...-4821.jpg") → delete from the bucket
+//   - a bare local filename (pre-migration data, e.g. "gallery-172939...-4821.jpg") → delete from local disk
+// Errors (already-deleted, not-found, etc.) are swallowed — deletion is best-effort cleanup.
+async function deleteImageAsset(storedFilename) {
+  if (!storedFilename) return;
+  if (storedFilename.includes('/')) {
+    await bucket.file(storedFilename).delete().catch(() => {});
+  } else {
+    await fsPromises.unlink(path.join(UPLOAD_DIRS.gallery, storedFilename)).catch(() => {});
+    await fsPromises.unlink(path.join(UPLOAD_DIRS.blog, storedFilename)).catch(() => {});
+  }
+}
 
 // ═══════════════════════════════════════════════════════════════
 //  PHOTO / BLOG POST SHARED CONFIG
@@ -913,7 +947,14 @@ app.post('/admin/gallery-items', authMiddleware, galleryUpload.array('images', 1
     if (!title || !title.trim())
       return res.status(400).json({ success: false, error: 'Title is required.' });
 
-    const uploadedFiles = (req.files || []).map(f => ({ url: `/images/uploads/gallery/${f.filename}`, filename: f.filename, source: 'upload' }));
+    const uploadedFiles = [];
+    for (const f of (req.files || [])) {
+      const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      const ext = path.extname(f.originalname).toLowerCase() || '.jpg';
+      const storagePath = `gallery/${unique}${ext}`;
+      const url = await uploadBufferToStorage(f.buffer, storagePath, f.mimetype);
+      uploadedFiles.push({ url, filename: storagePath, source: 'upload' });
+    }
 
     let images = [];
     if (imageOrder) {
@@ -986,7 +1027,14 @@ app.put('/admin/gallery-items/:id', authMiddleware, galleryUpload.array('images'
     const { title, category, layout, description, tags, pinterestUrl, status, publishAt, imageOrder, removeImages } = req.body;
 
     const existingImages = existing.images || [];
-    const uploadedFiles = (req.files || []).map(f => ({ url: `/images/uploads/gallery/${f.filename}`, filename: f.filename, source: 'upload' }));
+    const uploadedFiles = [];
+    for (const f of (req.files || [])) {
+      const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      const ext = path.extname(f.originalname).toLowerCase() || '.jpg';
+      const storagePath = `gallery/${unique}${ext}`;
+      const url = await uploadBufferToStorage(f.buffer, storagePath, f.mimetype);
+      uploadedFiles.push({ url, filename: storagePath, source: 'upload' });
+    }
 
     let images;
     if (imageOrder) {
@@ -1012,11 +1060,11 @@ app.put('/admin/gallery-items/:id', authMiddleware, galleryUpload.array('images'
       // Safety net: include any uploaded files the client didn't reference.
       if (uploadIdx < uploadedFiles.length) images = images.concat(uploadedFiles.slice(uploadIdx));
 
-      // Delete local files for any existing images that were dropped from the order.
+      // Delete storage assets for any existing images that were dropped from the order.
       const keptFilenames = new Set(images.filter(im => im.filename).map(im => im.filename));
       for (const im of existingImages) {
         if (im.filename && !keptFilenames.has(im.filename)) {
-          await fsPromises.unlink(path.join(UPLOAD_DIRS.gallery, im.filename)).catch(() => {});
+          await deleteImageAsset(im.filename);
         }
       }
     } else {
@@ -1026,7 +1074,7 @@ app.put('/admin/gallery-items/:id', authMiddleware, galleryUpload.array('images'
         let toRemove = [];
         try { toRemove = JSON.parse(removeImages); } catch { toRemove = []; }
         for (const filename of toRemove) {
-          await fsPromises.unlink(path.join(UPLOAD_DIRS.gallery, filename)).catch(() => {});
+          await deleteImageAsset(filename);
         }
         images = images.filter(im => !toRemove.includes(im.filename));
       }
@@ -1070,8 +1118,8 @@ app.delete('/admin/gallery-items/:id', authMiddleware, async (req, res) => {
     if (!doc.exists) return res.status(404).json({ success: false, error: 'Not found.' });
     const data = doc.data();
     for (const img of (data.images || [])) {
-      // Pinterest-linked photos have no local file to clean up.
-      if (img.filename) await fsPromises.unlink(path.join(UPLOAD_DIRS.gallery, img.filename)).catch(() => {});
+      // Pinterest-linked photos have no asset to clean up.
+      await deleteImageAsset(img.filename);
     }
     await docRef.delete();
     await logActivity('delete', 'gallery_item', req.params.id, data.title, req.admin?.username || 'admin', 'Deleted permanently');
@@ -1166,7 +1214,14 @@ app.post('/admin/blog-posts', authMiddleware, blogUpload.single('coverImage'), a
     if (!title || !title.trim() || !content || !content.trim())
       return res.status(400).json({ success: false, error: 'Title and content are required.' });
 
-    const coverImage = req.file ? `/images/uploads/blog/${req.file.filename}` : '';
+    let coverImage = '';
+    let coverImagePath = '';
+    if (req.file) {
+      const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      const ext = path.extname(req.file.originalname).toLowerCase() || '.jpg';
+      coverImagePath = `blog/${unique}${ext}`;
+      coverImage = await uploadBufferToStorage(req.file.buffer, coverImagePath, req.file.mimetype);
+    }
     const wordCount = content.trim().split(/\s+/).length;
     const readTime = Math.max(1, Math.round(wordCount / 200)) + ' min read';
     const finalStatus = status === 'scheduled' && publishAt ? 'scheduled' : (status === 'published' ? 'published' : 'draft');
@@ -1179,6 +1234,7 @@ app.post('/admin/blog-posts', authMiddleware, blogUpload.single('coverImage'), a
       content: content.trim(),
       read: readTime,
       coverImage,
+      coverImagePath,
       bg: pickRandom(BLOG_BG_POOL),
       icon: pickRandom(BLOG_ICON_POOL),
       tags: tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : [],
@@ -1210,17 +1266,18 @@ app.put('/admin/blog-posts/:id', authMiddleware, blogUpload.single('coverImage')
     const { title, tag, excerpt, content, tags, status, publishAt, removeCoverImage } = req.body;
 
     let coverImage = existing.coverImage || '';
+    let coverImagePath = existing.coverImagePath || '';
     if (removeCoverImage === 'true' && coverImage) {
-      const filename = path.basename(coverImage);
-      await fsPromises.unlink(path.join(UPLOAD_DIRS.blog, filename)).catch(() => {});
+      await deleteImageAsset(coverImagePath);
       coverImage = '';
+      coverImagePath = '';
     }
     if (req.file) {
-      if (coverImage) {
-        const oldFilename = path.basename(coverImage);
-        await fsPromises.unlink(path.join(UPLOAD_DIRS.blog, oldFilename)).catch(() => {});
-      }
-      coverImage = `/images/uploads/blog/${req.file.filename}`;
+      if (coverImage) await deleteImageAsset(coverImagePath);
+      const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      const ext = path.extname(req.file.originalname).toLowerCase() || '.jpg';
+      coverImagePath = `blog/${unique}${ext}`;
+      coverImage = await uploadBufferToStorage(req.file.buffer, coverImagePath, req.file.mimetype);
     }
 
     const newContent = content !== undefined ? content.trim() : existing.content;
@@ -1235,6 +1292,7 @@ app.put('/admin/blog-posts/:id', authMiddleware, blogUpload.single('coverImage')
       content: newContent,
       read: readTime,
       coverImage,
+      coverImagePath,
       tags: tags !== undefined ? tags.split(',').map(t => t.trim()).filter(Boolean) : existing.tags,
       status: finalStatus,
       publishAt: finalStatus === 'scheduled' && publishAt ? admin.firestore.Timestamp.fromDate(new Date(publishAt)) : null,
@@ -1257,8 +1315,7 @@ app.delete('/admin/blog-posts/:id', authMiddleware, async (req, res) => {
     if (!doc.exists) return res.status(404).json({ success: false, error: 'Not found.' });
     const data = doc.data();
     if (data.coverImage) {
-      const filename = path.basename(data.coverImage);
-      await fsPromises.unlink(path.join(UPLOAD_DIRS.blog, filename)).catch(() => {});
+      await deleteImageAsset(data.coverImagePath || path.basename(data.coverImage));
     }
     await docRef.delete();
     await logActivity('delete', 'blog_post', req.params.id, data.title, req.admin?.username || 'admin', 'Deleted permanently');
