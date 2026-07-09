@@ -1001,6 +1001,17 @@
     }
     #chatSendBtn:hover { background: #c5103d; transform: scale(1.08); }
     #chatSendBtn:disabled { background: var(--muted); cursor: not-allowed; transform: none; }
+    .like-btn:hover {
+      color: var(--accent) !important;
+      transform: scale(1.15);
+    }
+    .like-btn.liked {
+      color: var(--accent) !important;
+    }
+    .like-btn.liked i {
+      font-family: "Font Awesome 6 Free";
+      font-weight: 900; /* Solid heart */
+    }
     @media (max-width: 480px) {
       #chatWidget { width: calc(100vw - 32px); right: 16px; bottom: 80px; }
     }
@@ -1255,10 +1266,19 @@
         <div>
           <div class="g-modal-cat" id="gModalCat"></div>
           <h3 id="gModalTitle"></h3>
+          <div style="display: flex; gap: 14px; font-size: 13px; color: var(--muted); margin-top: 6px;">
+            <span><i class="fa-regular fa-eye"></i> <span id="gModalViews">0</span> views</span>
+            <span><i class="fa-regular fa-thumbs-up"></i> <span id="gModalLikes">0</span> likes</span>
+          </div>
         </div>
-        <a class="g-modal-pinterest-btn" id="gModalPinterestBtn" href="#" target="_blank" rel="noopener">
-          <i class="fa-brands fa-pinterest"></i> See more on Pinterest
-        </a>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+          <button class="gf" id="gModalLikeBtn" style="padding: 10px 20px; font-size: 13px; border-radius: 30px; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid var(--border); background: var(--white); color: var(--muted); cursor: pointer; transition: all var(--ease);" onclick="likeCurrentGalleryItem(event)">
+            <i class="fa-regular fa-heart"></i> Like
+          </button>
+          <a class="g-modal-pinterest-btn" id="gModalPinterestBtn" href="#" target="_blank" rel="noopener">
+            <i class="fa-brands fa-pinterest"></i> See more on Pinterest
+          </a>
+        </div>
       </div>
     </div>
   </div>
@@ -1498,9 +1518,22 @@
       <div class="g-item${layoutClass} reveal" data-c="${escAttr(it.filterKey)}" onclick="openGalleryModal(this)"
         data-id="${it.id}" data-title="${escAttr(it.title)}" data-images='${escAttr(JSON.stringify(it.images))}'
         data-pin="${escAttr(it.pinterestUrl)}" data-cat="${escAttr(it.category)}"
-        data-bg="${escAttr(it.bg)}" data-icon="${escAttr(it.icon)}">
+        data-bg="${escAttr(it.bg)}" data-icon="${escAttr(it.icon)}"
+        data-views="${it.views}" data-likes="${it.likes}">
         <div class="g-ph" style="background:${it.bg}"><i class="fa-solid ${it.icon}"></i><span>${escHtml(it.title)}</span></div>
-        <div class="g-ov"><p>${escHtml(it.title)}</p><span>${escHtml(it.category)}</span></div>
+        <div class="g-ov">
+          <p>${escHtml(it.title)}</p>
+          <span>${escHtml(it.category)}</span>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 10px; width: 100%;">
+            <div style="display: flex; gap: 10px; font-size: 11.5px; opacity: 0.9;">
+              <span><i class="fa-regular fa-eye"></i> <span class="g-views-${it.id}">${it.views}</span></span>
+              <span><i class="fa-regular fa-thumbs-up"></i> <span class="g-likes-${it.id}">${it.likes}</span></span>
+            </div>
+            <button class="like-btn" onclick="likeGalleryItem(event, '${it.id}')" style="background: none; border: none; color: #fff; cursor: pointer; font-size: 13px; padding: 4px; display: flex; align-items: center; transition: transform 0.2s;" title="Like this photo">
+              <i class="fa-regular fa-heart"></i>
+            </button>
+          </div>
+        </div>
       </div>`;
       }).join('');
       document.querySelectorAll('#galleryGrid .reveal').forEach(el => obs.observe(el));
@@ -1517,12 +1550,23 @@
     gModalImages = images;
     gModalIndex = 0;
 
+    const modal = document.getElementById('galleryModal');
+    modal.dataset.currentId = el.dataset.id || '';
+
     document.getElementById('gModalTitle').textContent = el.dataset.title;
     document.getElementById('gModalCat').textContent = el.dataset.cat;
+    document.getElementById('gModalViews').textContent = el.dataset.views || 0;
+    document.getElementById('gModalLikes').textContent = el.dataset.likes || 0;
+
+    const liked = localStorage.getItem('liked-g-' + el.dataset.id) === 'true';
+    const likeBtn = document.getElementById('gModalLikeBtn');
+    likeBtn.className = liked ? 'gf active' : 'gf';
+    likeBtn.innerHTML = liked ? '<i class="fa-solid fa-heart"></i> Liked' : '<i class="fa-regular fa-heart"></i> Like';
+
     const pinBtn = document.getElementById('gModalPinterestBtn');
     if (el.dataset.pin) {
       pinBtn.href = el.dataset.pin;
-      pinBtn.style.display = '';
+      pinBtn.style.display = 'inline-flex';
     } else {
       pinBtn.style.display = 'none';
     }
@@ -1536,11 +1580,20 @@
 
     renderGModalImage(thumb);
 
-    document.getElementById('galleryModal').classList.add('open');
+    modal.classList.add('open');
     document.body.style.overflow = 'hidden';
 
     // Fire-and-forget view counter — doesn't block the UI.
-    if (el.dataset.id) fetch('/api/gallery-items/' + el.dataset.id + '/view', { method: 'POST' }).catch(() => {});
+    if (el.dataset.id) {
+      fetch('/api/gallery-items/' + el.dataset.id + '/view', { method: 'POST' }).then(() => {
+        // Increment count locally immediately
+        const newViews = parseInt(el.dataset.views || 0) + 1;
+        el.dataset.views = newViews;
+        document.getElementById('gModalViews').textContent = newViews;
+        const cardViews = document.querySelector(`.g-views-${el.dataset.id}`);
+        if (cardViews) cardViews.textContent = newViews;
+      }).catch(() => {});
+    }
   }
 
   function renderGModalImage(thumbEl) {
@@ -1590,12 +1643,17 @@
         grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px 0;">No blog posts yet — check back soon!</p>';
         return;
       }
-      grid.innerHTML = data.posts.map(p => `
+      grid.innerHTML = data.posts.map(p => {
+        const liked = localStorage.getItem('liked-b-' + p.id) === 'true';
+        const likedClass = liked ? 'like-btn liked' : 'like-btn';
+        const likedIcon = liked ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
+        const likedText = liked ? 'Liked' : 'Like';
+        return `
       <article class="bc${p.featured ? ' bc--feat' : ''} reveal"
         data-id="${p.id}" data-tag="${escAttr(p.tag)}" data-title="${escAttr(p.title)}"
         data-date="${escAttr(p.date)}" data-read="${escAttr(p.read)}"
         data-bg="${escAttr(p.bg)}" data-icon="${escAttr(p.icon)}" data-cover="${escAttr(p.coverImage)}"
-        data-content="${escAttr(p.content)}">
+        data-content="${escAttr(p.content)}" data-views="${p.views}" data-likes="${p.likes}">
         <div class="bc-thumb" style="background:${p.bg}"><i class="fa-solid ${p.icon}"></i></div>
         <div class="bc-body">
           <span class="btag">${escHtml(p.tag)}</span>
@@ -1604,10 +1662,18 @@
           <div class="bc-meta">
             <span><i class="fa-regular fa-calendar"></i> ${escHtml(p.date)}</span>
             <span><i class="fa-regular fa-clock"></i> ${escHtml(p.read)}</span>
+            <span><i class="fa-regular fa-eye"></i> <span class="b-views-${p.id}">${p.views}</span></span>
+            <span><i class="fa-regular fa-thumbs-up"></i> <span class="b-likes-${p.id}">${p.likes}</span></span>
           </div>
-          <a href="#" class="bc-more" onclick="openBlogModal(this.closest('article'));return false;">Read more <i class="fa-solid fa-arrow-right"></i></a>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border);">
+            <a href="#" class="bc-more" onclick="openBlogModal(this.closest('article'));return false;" style="margin-top: 0;">Read more <i class="fa-solid fa-arrow-right"></i></a>
+            <button class="${likedClass}" onclick="likeBlogPost(event, '${p.id}')" style="background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; display: flex; align-items: center; transition: color 0.2s, transform 0.2s;" title="Like this post">
+              <i class="${likedIcon}" style="margin-right: 4px;"></i> <span class="like-label" style="font-size: 12px; font-weight: 500;">${likedText}</span>
+            </button>
+          </div>
         </div>
-      </article>`).join('');
+      </article>`;
+      }).join('');
       document.querySelectorAll('#blogGrid .reveal').forEach(el => obs.observe(el));
     } catch (e) {
       grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px 0;">Couldn\'t load the blog right now.</p>';
@@ -1624,20 +1690,41 @@
       hero.style.background = article.dataset.bg;
       hero.innerHTML = `<i class="fa-solid ${article.dataset.icon}" style="font-size:64px;color:rgba(255,255,255,.75);"></i>`;
     }
+    const modal = document.getElementById('blogModal');
+    modal.dataset.currentId = article.dataset.id || '';
+
     document.getElementById('bModalTag').textContent = article.dataset.tag;
     document.getElementById('bModalTitle').textContent = article.dataset.title;
+
+    const liked = localStorage.getItem('liked-b-' + article.dataset.id) === 'true';
+    const likedClass = liked ? 'like-btn liked' : 'like-btn';
+    const likedIcon = liked ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
+    const likedText = liked ? 'Liked' : 'Like';
+
     document.getElementById('bModalMeta').innerHTML =
       `<span><i class="fa-regular fa-calendar"></i> ${article.dataset.date}</span>
-       &nbsp;&nbsp;<span><i class="fa-regular fa-clock"></i> ${article.dataset.read}</span>`;
+       &nbsp;&nbsp;<span><i class="fa-regular fa-clock"></i> ${article.dataset.read}</span>
+       &nbsp;&nbsp;<span><i class="fa-regular fa-eye"></i> <span id="bModalViews">${article.dataset.views || 0}</span> views</span>
+       &nbsp;&nbsp;<span><i class="fa-regular fa-thumbs-up"></i> <span id="bModalLikes">${article.dataset.likes || 0}</span> likes</span>
+       &nbsp;&nbsp;<button class="${likedClass}" onclick="likeBlogPost(event, '${article.dataset.id}', true)" id="bModalLikeBtn" style="display:inline-flex; align-items:center; background:none; border:none; color:var(--muted); cursor:pointer; font-size:13.5px;" title="Like this post"><i class="${likedIcon}" style="margin-right:4px;"></i> <span class="like-label">${likedText}</span></button>`;
+
     const paragraphs = article.dataset.content.split('\n\n').map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
     document.getElementById('bModalContent').innerHTML = paragraphs;
-    const modal = document.getElementById('blogModal');
     modal.classList.add('open');
     document.body.style.overflow = 'hidden';
     modal.querySelector('.blog-modal').scrollTop = 0;
 
     // Fire-and-forget view counter — doesn't block the UI.
-    if (article.dataset.id) fetch('/api/blog-posts/' + article.dataset.id + '/view', { method: 'POST' }).catch(() => {});
+    if (article.dataset.id) {
+      fetch('/api/blog-posts/' + article.dataset.id + '/view', { method: 'POST' }).then(() => {
+        // Increment count locally immediately
+        const newViews = parseInt(article.dataset.views || 0) + 1;
+        article.dataset.views = newViews;
+        document.getElementById('bModalViews').textContent = newViews;
+        const cardViews = document.querySelector(`.b-views-${article.dataset.id}`);
+        if (cardViews) cardViews.textContent = newViews;
+      }).catch(() => {});
+    }
   }
   function closeBlogModal() {
     document.getElementById('blogModal').classList.remove('open');
@@ -1830,6 +1917,189 @@
     this.style.height = 'auto';
     this.style.height = Math.min(this.scrollHeight, 100) + 'px';
   });
+
+  // Liking a gallery item from the grid card
+  async function likeGalleryItem(event, id) {
+    if (event) event.stopPropagation(); // prevent modal trigger
+    if (localStorage.getItem('liked-g-' + id) === 'true') return; // already liked
+
+    try {
+      const res = await fetch(`/api/gallery-items/${id}/like`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        localStorage.setItem('liked-g-' + id, 'true');
+        // Update DOM counts instantly
+        const els = document.querySelectorAll(`.g-likes-${id}`);
+        els.forEach(el => {
+          const current = parseInt(el.textContent || 0);
+          el.textContent = current + 1;
+        });
+        // Find the card element and update dataset
+        const card = document.querySelector(`.g-item[data-id="${id}"]`);
+        if (card) {
+          card.dataset.likes = parseInt(card.dataset.likes || 0) + 1;
+          const btn = card.querySelector('.like-btn');
+          if (btn) btn.classList.add('liked');
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // Liking a gallery item from the modal details popup
+  async function likeCurrentGalleryItem(event) {
+    if (event) event.stopPropagation();
+    const modal = document.getElementById('galleryModal');
+    const id = modal.dataset.currentId;
+    if (!id) return;
+    if (localStorage.getItem('liked-g-' + id) === 'true') return;
+
+    try {
+      const res = await fetch(`/api/gallery-items/${id}/like`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        localStorage.setItem('liked-g-' + id, 'true');
+        const modalLikes = document.getElementById('gModalLikes');
+        if (modalLikes) {
+          modalLikes.textContent = parseInt(modalLikes.textContent || 0) + 1;
+        }
+        // Update card count
+        const els = document.querySelectorAll(`.g-likes-${id}`);
+        els.forEach(el => {
+          const current = parseInt(el.textContent || 0);
+          el.textContent = current + 1;
+        });
+        const card = document.querySelector(`.g-item[data-id="${id}"]`);
+        if (card) {
+          card.dataset.likes = parseInt(card.dataset.likes || 0) + 1;
+          const cardBtn = card.querySelector('.like-btn');
+          if (cardBtn) cardBtn.classList.add('liked');
+        }
+        // Update modal button state
+        const btn = document.getElementById('gModalLikeBtn');
+        if (btn) {
+          btn.className = 'gf active';
+          btn.innerHTML = '<i class="fa-solid fa-heart"></i> Liked';
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // Liking a blog post from card or modal
+  async function likeBlogPost(event, id, isFromModal = false) {
+    if (event) event.stopPropagation();
+    if (localStorage.getItem('liked-b-' + id) === 'true') return;
+
+    try {
+      const res = await fetch(`/api/blog-posts/${id}/like`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        localStorage.setItem('liked-b-' + id, 'true');
+        // Update card likes count
+        const els = document.querySelectorAll(`.b-likes-${id}`);
+        els.forEach(el => {
+          const current = parseInt(el.textContent || 0);
+          el.textContent = current + 1;
+        });
+        // Find card and update dataset
+        const card = document.querySelector(`article[data-id="${id}"]`);
+        if (card) {
+          card.dataset.likes = parseInt(card.dataset.likes || 0) + 1;
+          const cardBtn = card.querySelector('.like-btn');
+          if (cardBtn) {
+            cardBtn.className = 'like-btn liked';
+            const icon = cardBtn.querySelector('i');
+            if (icon) icon.className = 'fa-solid fa-heart';
+            const text = cardBtn.querySelector('.like-label');
+            if (text) text.textContent = 'Liked';
+          }
+        }
+        // Update modal if open
+        const modal = document.getElementById('blogModal');
+        if (modal.classList.contains('open') && modal.dataset.currentId === id) {
+          const modalLikes = document.getElementById('bModalLikes');
+          if (modalLikes) modalLikes.textContent = parseInt(modalLikes.textContent || 0) + 1;
+          const modalBtn = document.getElementById('bModalLikeBtn');
+          if (modalBtn) {
+            modalBtn.className = 'like-btn liked';
+            const icon = modalBtn.querySelector('i');
+            if (icon) icon.className = 'fa-solid fa-heart';
+            const text = modalBtn.querySelector('.like-label');
+            if (text) text.textContent = 'Liked';
+          }
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // Real-time polling
+  let statsPollInterval = null;
+  function startRealtimeStatsPolling() {
+    if (statsPollInterval) clearInterval(statsPollInterval);
+    statsPollInterval = setInterval(async () => {
+      try {
+        const resG = await fetch('/api/gallery-items');
+        const dataG = await resG.json();
+        if (dataG.success) {
+          dataG.items.forEach(it => {
+            const viewsEl = document.querySelector(`.g-views-${it.id}`);
+            const likesEl = document.querySelector(`.g-likes-${it.id}`);
+            if (viewsEl) viewsEl.textContent = it.views;
+            if (likesEl) likesEl.textContent = it.likes;
+
+            const card = document.querySelector(`.g-item[data-id="${it.id}"]`);
+            if (card) {
+              card.dataset.views = it.views;
+              card.dataset.likes = it.likes;
+            }
+
+            const modal = document.getElementById('galleryModal');
+            if (modal.classList.contains('open') && modal.dataset.currentId === it.id) {
+              const mv = document.getElementById('gModalViews');
+              const ml = document.getElementById('gModalLikes');
+              if (mv) mv.textContent = it.views;
+              if (ml) ml.textContent = it.likes;
+            }
+          });
+        }
+
+        const resB = await fetch('/api/blog-posts');
+        const dataB = await resB.json();
+        if (dataB.success) {
+          dataB.posts.forEach(p => {
+            const viewsEl = document.querySelector(`.b-views-${p.id}`);
+            const likesEl = document.querySelector(`.b-likes-${p.id}`);
+            if (viewsEl) viewsEl.textContent = p.views;
+            if (likesEl) likesEl.textContent = p.likes;
+
+            const card = document.querySelector(`article[data-id="${p.id}"]`);
+            if (card) {
+              card.dataset.views = p.views;
+              card.dataset.likes = p.likes;
+            }
+
+            const modal = document.getElementById('blogModal');
+            if (modal.classList.contains('open') && modal.dataset.currentId === p.id) {
+              const mv = document.getElementById('bModalViews');
+              const ml = document.getElementById('bModalLikes');
+              if (mv) mv.textContent = p.views;
+              if (ml) ml.textContent = p.likes;
+            }
+          });
+        }
+      } catch (e) {
+        // Polling errors fail silently in the background
+      }
+    }, 5000);
+  }
+
+  // Trigger stats polling
+  startRealtimeStatsPolling();
 </script>
 </body>
 </html>

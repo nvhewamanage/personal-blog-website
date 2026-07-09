@@ -70,13 +70,13 @@ const imageFileFilter = (req, file, cb) => {
 // Photo posts: up to 10 images per post
 const galleryUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 8 * 1024 * 1024, files: 10 },
+  limits: { fileSize: 100 * 1024 * 1024, files: 10 },
   fileFilter: imageFileFilter,
 });
 // Blog posts: single cover image
 const blogUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 8 * 1024 * 1024, files: 1 },
+  limits: { fileSize: 100 * 1024 * 1024, files: 1 },
   fileFilter: imageFileFilter,
 });
 
@@ -150,8 +150,8 @@ async function deleteImageAsset(storedFilename) {
 
 // How many published posts show on the live site before the oldest rolls off.
 // (Older posts stay saved in the admin panel — they're just hidden from the public site.)
-const GALLERY_DISPLAY_LIMIT = 20;
-const BLOG_DISPLAY_LIMIT    = 20;
+const GALLERY_DISPLAY_LIMIT = 8;
+const BLOG_DISPLAY_LIMIT    = 4;
 
 // Fixed gallery categories (must match the filter buttons in index.html)
 const GALLERY_CATEGORY_META = {
@@ -210,15 +210,15 @@ async function publishDuePosts() {
     try {
       const snap = await db.collection(col)
         .where('status', '==', 'scheduled')
-        .where('publishAt', '<=', now)
         .get();
       for (const doc of snap.docs) {
-        await doc.ref.update({ status: 'published', updatedAt: admin.firestore.FieldValue.serverTimestamp() });
-        await logActivity('publish', entityType, doc.id, doc.data().title, 'system', 'Auto-published on schedule');
+        const data = doc.data();
+        if (data.publishAt && data.publishAt.toMillis() <= now.toMillis()) {
+          await doc.ref.update({ status: 'published', updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+          await logActivity('publish', entityType, doc.id, data.title, 'system', 'Auto-published on schedule');
+        }
       }
     } catch (err) {
-      // Firestore may need a composite index the first time this compound query runs —
-      // check server logs for an index-creation link if this errors persistently.
       console.error(`Scheduled publish check failed for ${col}:`, err.message);
     }
   }
@@ -1135,12 +1135,11 @@ app.get('/api/gallery-items', async (req, res) => {
   try {
     const snap = await db.collection('gallery_items')
       .where('status', '==', 'published')
-      .orderBy('createdAt', 'desc')
-      .limit(GALLERY_DISPLAY_LIMIT)
       .get();
     const items = snap.docs.map(doc => {
       const d = doc.data();
       const meta = GALLERY_CATEGORY_META[d.category] || GALLERY_CATEGORY_META.Travel;
+      const created = d.createdAt?.toDate ? d.createdAt.toDate() : new Date();
       return {
         id: doc.id,
         title: d.title,
@@ -1151,9 +1150,15 @@ app.get('/api/gallery-items', async (req, res) => {
         pinterestUrl: d.pinterestUrl || '',
         icon: meta.icon,
         bg: meta.bg,
+        createdTime: created.getTime(),
+        views: d.views || 0,
+        likes: d.likes || 0,
       };
     });
-    res.json({ success: true, items });
+    // Sort in-memory by createdTime descending
+    items.sort((a, b) => b.createdTime - a.createdTime);
+    const limitedItems = items.slice(0, GALLERY_DISPLAY_LIMIT);
+    res.json({ success: true, items: limitedItems });
   } catch (err) {
     console.error('Public gallery fetch error:', err.message);
     res.status(500).json({ success: false, error: 'Failed to load gallery.' });
@@ -1164,6 +1169,16 @@ app.get('/api/gallery-items', async (req, res) => {
 app.post('/api/gallery-items/:id/view', publicLimiter, async (req, res) => {
   try {
     await db.collection('gallery_items').doc(req.params.id).update({ views: admin.firestore.FieldValue.increment(1) });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false });
+  }
+});
+
+// Public like-counter — fired by the site whenever a visitor likes a photo post.
+app.post('/api/gallery-items/:id/like', publicLimiter, async (req, res) => {
+  try {
+    await db.collection('gallery_items').doc(req.params.id).update({ likes: admin.firestore.FieldValue.increment(1) });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false });
@@ -1331,10 +1346,8 @@ app.get('/api/blog-posts', async (req, res) => {
   try {
     const snap = await db.collection('blog_posts')
       .where('status', '==', 'published')
-      .orderBy('createdAt', 'desc')
-      .limit(BLOG_DISPLAY_LIMIT)
       .get();
-    const posts = snap.docs.map((doc, i) => {
+    const posts = snap.docs.map(doc => {
       const d = doc.data();
       const created = d.createdAt?.toDate ? d.createdAt.toDate() : new Date();
       return {
@@ -1348,10 +1361,19 @@ app.get('/api/blog-posts', async (req, res) => {
         icon: d.icon || 'fa-pen-nib',
         bg: d.bg || BLOG_BG_POOL[0],
         date: created.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        featured: i === 0, // newest published post gets the large "featured" card treatment
+        createdTime: created.getTime(),
+        views: d.views || 0,
+        likes: d.likes || 0,
       };
     });
-    res.json({ success: true, posts });
+    // Sort in-memory by createdTime descending
+    posts.sort((a, b) => b.createdTime - a.createdTime);
+    const limitedPosts = posts.slice(0, BLOG_DISPLAY_LIMIT);
+    // Assign featured flag to the newest post (index 0)
+    limitedPosts.forEach((p, i) => {
+      p.featured = (i === 0);
+    });
+    res.json({ success: true, posts: limitedPosts });
   } catch (err) {
     console.error('Public blog fetch error:', err.message);
     res.status(500).json({ success: false, error: 'Failed to load blog posts.' });
@@ -1361,6 +1383,16 @@ app.get('/api/blog-posts', async (req, res) => {
 app.post('/api/blog-posts/:id/view', publicLimiter, async (req, res) => {
   try {
     await db.collection('blog_posts').doc(req.params.id).update({ views: admin.firestore.FieldValue.increment(1) });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false });
+  }
+});
+
+// Public like-counter — fired by the site whenever a visitor likes a blog post.
+app.post('/api/blog-posts/:id/like', publicLimiter, async (req, res) => {
+  try {
+    await db.collection('blog_posts').doc(req.params.id).update({ likes: admin.firestore.FieldValue.increment(1) });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false });
@@ -1403,11 +1435,9 @@ app.get('/api/site-context', async (req, res) => {
     // Fetch published blog posts only — drafts/scheduled posts stay out of the chatbot's view.
     const postsSnap = await db.collection('blog_posts')
       .where('status', '==', 'published')
-      .orderBy('createdAt', 'desc')
-      .limit(20)
       .get();
 
-    const posts = postsSnap.docs.map(doc => {
+    const allPosts = postsSnap.docs.map(doc => {
       const d = doc.data();
       const created = d.createdAt?.toDate ? d.createdAt.toDate() : new Date();
       return {
@@ -1417,23 +1447,36 @@ app.get('/api/site-context', async (req, res) => {
         read:    d.read    || '',
         excerpt: d.excerpt || '',
         author:  d.author  || 'Chanuka Nimsara',
+        createdTime: created.getTime(),
       };
+    });
+    // Sort in-memory by createdTime descending and limit to 20
+    allPosts.sort((a, b) => b.createdTime - a.createdTime);
+    const posts = allPosts.slice(0, 20).map(p => {
+      const { createdTime, ...rest } = p;
+      return rest;
     });
 
     // Fetch published gallery items only
     const gallerySnap = await db.collection('gallery_items')
       .where('status', '==', 'published')
-      .orderBy('createdAt', 'desc')
-      .limit(30)
       .get();
 
-    const gallery = gallerySnap.docs.map(doc => {
+    const allGallery = gallerySnap.docs.map(doc => {
       const d = doc.data();
+      const created = d.createdAt?.toDate ? d.createdAt.toDate() : new Date();
       return {
         title:       d.title       || '',
         category:    d.category    || '',
         description: d.description || '',
+        createdTime: created.getTime(),
       };
+    });
+    // Sort in-memory by createdTime descending and limit to 30
+    allGallery.sort((a, b) => b.createdTime - a.createdTime);
+    const gallery = allGallery.slice(0, 30).map(g => {
+      const { createdTime, ...rest } = g;
+      return rest;
     });
 
     // Fetch author / about info
