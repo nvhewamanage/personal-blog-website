@@ -115,6 +115,7 @@ admin.initializeApp({
 });
 
 const db     = admin.firestore();
+db.settings({ preferRest: true });
 const bucket = admin.storage().bucket();
 console.log('✅ Firebase / Firestore connected');
 console.log(`✅ Firebase Storage bucket: ${storageBucket}`);
@@ -297,6 +298,8 @@ async function publishDuePosts() {
           await logActivity('publish', entityType, doc.id, data.title, 'system', 'Auto-published on schedule');
           if (entityType === 'gallery_item') invalidateGalleryCache();
           if (entityType === 'blog_post') invalidateBlogCache();
+          const updatedData = { ...data, status: 'published' };
+          triggerAutomaticPostNewsletter(entityType, doc.id, updatedData);
         }
       }
     } catch (err) {
@@ -975,6 +978,83 @@ ${previewText ? `<div style="display:none;max-height:0;overflow:hidden;">${previ
 </body></html>`;
 }
 
+async function triggerAutomaticPostNewsletter(entityType, docId, data) {
+  if (data.status !== 'published') return;
+  if (data.newsletterSent) return;
+
+  const docRef = db.collection(entityType === 'blog_post' ? 'blog_posts' : 'gallery_items').doc(docId);
+  const doc = await docRef.get();
+  if (!doc.exists || doc.data().newsletterSent) return;
+
+  try {
+    const snapshot = await db.collection('subscribers').get();
+    if (snapshot.empty) {
+      await docRef.update({ newsletterSent: true });
+      return;
+    }
+
+    const emails = snapshot.docs.map(doc => doc.data().email);
+    
+    let subject = '';
+    let previewText = '';
+    let heading = '';
+    let body = '';
+    let ctaText = '';
+    let ctaUrl = '';
+
+    if (entityType === 'blog_post') {
+      subject = `New Blog Post: ${data.title}`;
+      previewText = `Read my latest blog post: "${data.title}"`;
+      heading = `New Blog Post Published!`;
+      body = `${data.excerpt || (data.content ? data.content.slice(0, 150) + '...' : '')}`;
+      ctaText = `Read Post`;
+      ctaUrl = `http://localhost:3000/#blog`;
+    } else {
+      subject = `New Photo Post: ${data.title}`;
+      previewText = `Check out my new photo post: "${data.title}"`;
+      heading = `New Photos Uploaded!`;
+      body = `Category: ${data.category || 'Travel'}.\n\n${data.description || 'Take a look at my new photos on the website.'}`;
+      ctaText = `View Gallery`;
+      ctaUrl = `http://localhost:3000/#gallery`;
+    }
+
+    const html = buildNewsletterHTML({ subject, previewText, heading, body, ctaText, ctaUrl });
+
+    const BATCH = 50;
+    let sent = 0;
+    for (let i = 0; i < emails.length; i += BATCH) {
+      const batch = emails.slice(i, i + BATCH);
+      await transporter.sendMail({
+        from:    `"Chanuka Nimsara" <${process.env.GMAIL_USER}>`,
+        bcc:     batch,
+        subject,
+        html,
+      });
+      sent += batch.length;
+    }
+
+    // Save newsletter history
+    await db.collection('newsletters').add({
+      subject,
+      preview_text:  previewText,
+      heading,
+      body,
+      cta_text:      ctaText,
+      cta_url:       ctaUrl,
+      total_recipients: emails.length,
+      sent_count:    sent,
+      sent_by:       'system',
+      sent_at:       admin.firestore.Timestamp.now(),
+    });
+
+    // Mark as sent
+    await docRef.update({ newsletterSent: true });
+    console.log(`Automatic newsletter sent for ${entityType} ${docId}`);
+  } catch (err) {
+    console.error(`Automatic newsletter send failed for ${entityType} ${docId}:`, err.message);
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════
 //  PHOTO POSTS  (gallery_items)
 // ═══════════════════════════════════════════════════════════════
@@ -1102,6 +1182,15 @@ app.post('/admin/gallery-items', authMiddleware, galleryUpload.fields([{ name: '
 
     await logActivity('create', 'gallery_item', docRef.id, title.trim(), actor, `Created as ${finalStatus}`);
     invalidateGalleryCache();
+    if (finalStatus === 'published') {
+      const createdItem = {
+        title: title.trim(),
+        category,
+        description: (description || '').trim(),
+        status: finalStatus
+      };
+      triggerAutomaticPostNewsletter('gallery_item', docRef.id, createdItem);
+    }
     res.json({ success: true, id: docRef.id });
   } catch (err) {
     console.error('Create gallery item error:', err.message);
@@ -1226,6 +1315,15 @@ app.put('/admin/gallery-items/:id', authMiddleware, galleryUpload.fields([{ name
 
     await logActivity('update', 'gallery_item', req.params.id, title || existing.title, actor, `Updated (${finalStatus})`);
     invalidateGalleryCache();
+    if (finalStatus === 'published' && !existing.newsletterSent) {
+      const updatedItem = {
+        title: title !== undefined ? title.trim() : existing.title,
+        category: category && GALLERY_CATEGORY_META[category] ? category : existing.category,
+        description: description !== undefined ? description.trim() : existing.description,
+        status: finalStatus
+      };
+      triggerAutomaticPostNewsletter('gallery_item', req.params.id, updatedItem);
+    }
     res.json({ success: true });
   } catch (err) {
     console.error('Update gallery item error:', err.message);
@@ -1372,6 +1470,15 @@ app.post('/admin/blog-posts', authMiddleware, blogUpload.single('coverImage'), a
 
     await logActivity('create', 'blog_post', docRef.id, title.trim(), actor, `Created as ${finalStatus}`);
     invalidateBlogCache();
+    if (finalStatus === 'published') {
+      const createdPost = {
+        title: title.trim(),
+        excerpt: (excerpt || content.trim().slice(0, 160)).trim(),
+        content: content.trim(),
+        status: finalStatus
+      };
+      triggerAutomaticPostNewsletter('blog_post', docRef.id, createdPost);
+    }
     res.json({ success: true, id: docRef.id });
   } catch (err) {
     console.error('Create blog post error:', err.message);
@@ -1426,6 +1533,15 @@ app.put('/admin/blog-posts/:id', authMiddleware, blogUpload.single('coverImage')
 
     await logActivity('update', 'blog_post', req.params.id, title || existing.title, actor, `Updated (${finalStatus})`);
     invalidateBlogCache();
+    if (finalStatus === 'published' && !existing.newsletterSent) {
+      const updatedPost = {
+        title: title !== undefined ? title.trim() : existing.title,
+        excerpt: excerpt !== undefined ? excerpt.trim() : existing.excerpt,
+        content: newContent,
+        status: finalStatus
+      };
+      triggerAutomaticPostNewsletter('blog_post', req.params.id, updatedPost);
+    }
     res.json({ success: true });
   } catch (err) {
     console.error('Update blog post error:', err.message);
