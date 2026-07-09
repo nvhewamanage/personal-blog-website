@@ -413,17 +413,18 @@
       display: flex; align-items: center; justify-content: center;
     }
     .img-upload-item .rm-btn:hover { background: var(--accent); }
-    .img-src-badge {
-      position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%;
-      background: rgba(230,0,35,.85); color: #fff; font-size: 10px;
-      display: flex; align-items: center; justify-content: center;
+    .img-source-badge {
+      position: absolute;
+      bottom: 3px;
+      left: 3px;
+      background: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      font-size: 8.5px;
+      padding: 1px 4px;
+      border-radius: 4px;
+      pointer-events: none;
+      font-weight: 600;
     }
-    .img-cover-badge {
-      position: absolute; bottom: 0; left: 0; right: 0; padding: 2px 0; text-align: center;
-      background: rgba(0,0,0,.55); color: #fff; font-size: 9px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
-    }
-    .pinterest-add-row { display: flex; gap: 8px; margin-top: 10px; }
-    .pinterest-add-row input { flex: 1; }
     .upload-drop {
       border: 2px dashed var(--border); border-radius: 12px; padding: 20px; text-align: center;
       color: var(--muted); font-size: 13px; cursor: pointer; transition: border-color var(--ease), background var(--ease);
@@ -473,6 +474,20 @@
     }
     .menu-btn:hover { background: var(--bg-alt); }
 
+    /* ── Confirm Overlay (Modals) ─────────────────────────────── */
+    .confirm-overlay {
+      position: fixed; inset: 0;
+      background: rgba(26,26,46,.55); backdrop-filter: blur(4px);
+      z-index: 1000; display: none;
+      align-items: center; justify-content: center; padding: 24px;
+    }
+    .confirm-box {
+      background: var(--panel); border-radius: 20px; padding: 36px;
+      box-shadow: 0 24px 64px rgba(26,26,46,.15);
+      animation: popIn .3s ease;
+      transition: background .3s;
+    }
+
     /* ── Responsive ───────────────────────────────────────────── */
     @media (max-width: 900px) {
       .sidebar { transform: translateX(-100%); }
@@ -483,6 +498,25 @@
       #page-newsletter > div { grid-template-columns: 1fr !important; }
       .topbar { padding: 0 16px; }
       .content { padding: 16px; }
+    }
+
+    @media (max-width: 600px) {
+      .topbar { padding: 0 12px; height: 60px; }
+      .topbar-time { display: none; }
+      .topbar-badge { font-size: 10px; padding: 2px 6px; }
+      .topbar-title { font-size: 16px; }
+      .content { padding: 12px; }
+      .panel-header { padding: 14px 16px; flex-direction: column; align-items: stretch; gap: 12px; }
+      .panel-header > div { flex-direction: column; align-items: stretch; gap: 8px; width: 100%; }
+      .panel-header input.search-input,
+      .panel-header select,
+      .panel-header .btn { width: 100% !important; max-width: 100% !important; justify-content: center; }
+      .panel-body { padding: 16px; }
+      .fg input, .fg textarea, .fg select { padding: 10px 14px; font-size: 13.5px; }
+      .nl-form .btn, .confirm-btns .btn { width: 100%; justify-content: center; }
+      .status-radio-group { flex-direction: column; width: 100%; }
+      .status-radio { width: 100%; }
+      .confirm-box { padding: 24px !important; }
     }
   </style>
 </head>
@@ -689,82 +723,85 @@
     </div>
 
     <!-- ── Photo Post Create/Edit Modal ──────────────────────── -->
-    <div id="photoPostModal" class="confirm-overlay" style="display:none;" onclick="if(event.target===this)closePhotoPostModal()">
-      <div class="confirm-box" style="max-width:640px;width:95%;max-height:90vh;overflow-y:auto;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
-          <h3 style="margin:0;font-size:17px;display:flex;align-items:center;gap:10px;" id="ppModalTitle">
+    <!-- ═══ PAGE: PHOTO POST CREATION / EDIT ═══ -->
+    <div class="page" id="page-photo-post-create">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title" id="ppModalTitle">
             <i class="fa-solid fa-image" style="color:var(--accent);"></i> New Photo Post
-          </h3>
-          <button onclick="closePhotoPostModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);padding:4px;">
-            <i class="fa-solid fa-xmark"></i>
+          </div>
+          <button class="btn btn-outline" style="padding:8px 16px;font-size:12.5px;border-radius:50px;" onclick="closePhotoPostModal()">
+            <i class="fa-solid fa-arrow-left"></i> Back to Gallery
           </button>
         </div>
-        <div class="nl-form">
-          <input type="hidden" id="ppId">
-          <div class="fg">
-            <label class="fl">Title <span style="color:var(--accent);">*</span></label>
-            <input type="text" id="ppTitle" placeholder="Mountain Trails">
-          </div>
-          <div class="form-row">
+        <div class="panel-body">
+          <div class="nl-form">
+            <input type="hidden" id="ppId">
             <div class="fg">
-              <label class="fl">Category <span style="color:var(--accent);">*</span></label>
-              <select id="ppCategory">
-                <option>Travel</option><option>Nature</option><option>Portrait</option><option>Urban</option>
-              </select>
+              <label class="fl">Title <span style="color:var(--accent);">*</span></label>
+              <input type="text" id="ppTitle" placeholder="Mountain Trails">
+            </div>
+            <div class="form-row">
+              <div class="fg">
+                <label class="fl">Category <span style="color:var(--accent);">*</span></label>
+                <select id="ppCategory">
+                  <option>Travel</option><option>Nature</option><option>Portrait</option><option>Urban</option>
+                </select>
+              </div>
+              <div class="fg">
+                <label class="fl">Card Layout</label>
+                <select id="ppLayout">
+                  <option value="normal">Normal</option>
+                  <option value="tall">Tall</option>
+                  <option value="wide">Wide</option>
+                </select>
+              </div>
             </div>
             <div class="fg">
-              <label class="fl">Card Layout</label>
-              <select id="ppLayout">
-                <option value="normal">Normal</option>
-                <option value="tall">Tall</option>
-                <option value="wide">Wide</option>
-              </select>
+              <label class="fl">Tags <span style="font-weight:400;color:var(--muted);">(comma-separated)</span></label>
+              <input type="text" id="ppTags" placeholder="sunset, hiking, mountains">
             </div>
-          </div>
-          <div class="fg">
-            <label class="fl">Tags <span style="font-weight:400;color:var(--muted);">(comma-separated)</span></label>
-            <input type="text" id="ppTags" placeholder="sunset, hiking, mountains">
-          </div>
-          <div class="fg">
-            <label class="fl">Description <span style="font-weight:400;color:var(--muted);">(used for search &amp; the site chatbot, not shown publicly)</span></label>
-            <textarea id="ppDescription" rows="2" placeholder="Short internal description…"></textarea>
-          </div>
-          <div class="fg">
-            <label class="fl">Pinterest Pin Link <span style="font-weight:400;color:var(--muted);">(optional — adds a "See more on Pinterest" button on the post)</span></label>
-            <input type="url" id="ppPinterest" placeholder="https://www.pinterest.com/pin/…">
-          </div>
-          <div class="fg">
-            <label class="fl">Photos <span style="color:var(--accent);">*</span> <span style="font-weight:400;color:var(--muted);">(up to 10 total — mix uploaded photos and Pinterest image links freely — first one is the cover)</span></label>
-            <div class="upload-drop" onclick="document.getElementById('ppFileInput').click()">
-              <i class="fa-solid fa-cloud-arrow-up" style="font-size:20px;display:block;margin-bottom:6px;"></i>
-              Click to choose images, or drop them here
+            <div class="fg">
+              <label class="fl">Description <span style="font-weight:400;color:var(--muted);">(used for search &amp; the site chatbot, not shown publicly)</span></label>
+              <textarea id="ppDescription" rows="2" placeholder="Short internal description…"></textarea>
             </div>
-            <input type="file" id="ppFileInput" accept="image/*" multiple style="display:none;" onchange="handlePpFilesSelected(this.files)">
-            <div class="pinterest-add-row">
-              <input type="url" id="ppPinterestImageInput" placeholder="Paste a Pinterest image link (e.g. https://i.pinimg.com/…)">
-              <button type="button" class="btn btn-outline" onclick="addPpPinterestImage()" style="white-space:nowrap;padding:9px 14px;font-size:13px;">
-                <i class="fa-brands fa-pinterest"></i> Add Photo
+            <div class="fg">
+              <label class="fl">Pinterest URL</label>
+              <input type="url" id="ppPinterest" placeholder="https://www.pinterest.com/pin/…">
+            </div>
+            <div class="fg">
+              <label class="fl">Photos <span style="color:var(--accent);">*</span> <span style="font-weight:400;color:var(--muted);">(up to 10 — first image is the cover)</span></label>
+              <div class="upload-drop" onclick="document.getElementById('ppFileInput').click()">
+                <i class="fa-solid fa-cloud-arrow-up" style="font-size:20px;display:block;margin-bottom:6px;"></i>
+                Click to choose images, or drop them here
+              </div>
+              <input type="file" id="ppFileInput" accept="image/*" multiple style="display:none;" onchange="handlePpFilesSelected(this.files)">
+              <div style="display: flex; gap: 8px; margin-top: 8px;">
+                <input type="url" id="ppPinterestPhotoInput" placeholder="Add Pinterest photo by URL (e.g. https://i.pinimg.com/...)" style="flex: 1; margin-bottom: 0;">
+                <button type="button" class="btn btn-outline" onclick="addPinterestPhoto()" style="padding: 0 16px; height: 42px; display: flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap;">
+                  <i class="fa-brands fa-pinterest" style="color: #e60023;"></i> Add Link
+                </button>
+              </div>
+              <div class="img-upload-grid" id="ppImagePreview"></div>
+            </div>
+            <div class="fg">
+              <label class="fl">Status</label>
+              <div class="status-radio-group" id="ppStatusGroup">
+                <label class="status-radio checked" data-val="draft"><input type="radio" name="ppStatus" value="draft" checked> Draft</label>
+                <label class="status-radio" data-val="scheduled"><input type="radio" name="ppStatus" value="scheduled"> Scheduled</label>
+                <label class="status-radio" data-val="published"><input type="radio" name="ppStatus" value="published"> Published</label>
+              </div>
+            </div>
+            <div class="fg schedule-row" id="ppScheduleRow">
+              <label class="fl">Publish On</label>
+              <input type="datetime-local" id="ppPublishAt">
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px;">
+              <button class="btn btn-outline" onclick="closePhotoPostModal()">Cancel</button>
+              <button class="btn" id="ppSaveBtn" onclick="savePhotoPost()" style="background:var(--accent);color:#fff;">
+                <i class="fa-solid fa-floppy-disk"></i> Save Photo Post
               </button>
             </div>
-            <div class="img-upload-grid" id="ppImagePreview"></div>
-          </div>
-          <div class="fg">
-            <label class="fl">Status</label>
-            <div class="status-radio-group" id="ppStatusGroup">
-              <label class="status-radio checked" data-val="draft"><input type="radio" name="ppStatus" value="draft" checked> Draft</label>
-              <label class="status-radio" data-val="scheduled"><input type="radio" name="ppStatus" value="scheduled"> Scheduled</label>
-              <label class="status-radio" data-val="published"><input type="radio" name="ppStatus" value="published"> Published</label>
-            </div>
-          </div>
-          <div class="fg schedule-row" id="ppScheduleRow">
-            <label class="fl">Publish On</label>
-            <input type="datetime-local" id="ppPublishAt">
-          </div>
-          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px;">
-            <button class="btn btn-outline" onclick="closePhotoPostModal()">Cancel</button>
-            <button class="btn" id="ppSaveBtn" onclick="savePhotoPost()" style="background:var(--accent);color:#fff;">
-              <i class="fa-solid fa-floppy-disk"></i> Save Photo Post
-            </button>
           </div>
         </div>
       </div>
@@ -818,66 +855,69 @@
     </div>
 
     <!-- ── Blog Post Create/Edit Modal ───────────────────────── -->
-    <div id="blogPostModal" class="confirm-overlay" style="display:none;" onclick="if(event.target===this)closeBlogPostModal()">
-      <div class="confirm-box" style="max-width:680px;width:95%;max-height:90vh;overflow-y:auto;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
-          <h3 style="margin:0;font-size:17px;display:flex;align-items:center;gap:10px;" id="bpModalTitle">
+    <!-- ═══ PAGE: BLOG POST CREATION / EDIT ═══ -->
+    <div class="page" id="page-blog-post-create">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title" id="bpModalTitle">
             <i class="fa-solid fa-pen-nib" style="color:var(--accent);"></i> New Blog Post
-          </h3>
-          <button onclick="closeBlogPostModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);padding:4px;">
-            <i class="fa-solid fa-xmark"></i>
+          </div>
+          <button class="btn btn-outline" style="padding:8px 16px;font-size:12.5px;border-radius:50px;" onclick="closeBlogPostModal()">
+            <i class="fa-solid fa-arrow-left"></i> Back to Blog Posts
           </button>
         </div>
-        <div class="nl-form">
-          <input type="hidden" id="bpId">
-          <div class="fg">
-            <label class="fl">Title <span style="color:var(--accent);">*</span></label>
-            <input type="text" id="bpTitle" placeholder="The Art of Slowing Down in a Fast World">
-          </div>
-          <div class="form-row">
+        <div class="panel-body">
+          <div class="nl-form">
+            <input type="hidden" id="bpId">
             <div class="fg">
-              <label class="fl">Category / Tag <span style="color:var(--accent);">*</span></label>
-              <input type="text" id="bpTag" placeholder="Life, Photography, Travel…">
+              <label class="fl">Title <span style="color:var(--accent);">*</span></label>
+              <input type="text" id="bpTitle" placeholder="The Art of Slowing Down in a Fast World">
+            </div>
+            <div class="form-row">
+              <div class="fg">
+                <label class="fl">Category / Tag <span style="color:var(--accent);">*</span></label>
+                <input type="text" id="bpTag" placeholder="Life, Photography, Travel…">
+              </div>
+              <div class="fg">
+                <label class="fl">Additional Tags <span style="font-weight:400;color:var(--muted);">(comma-separated)</span></label>
+                <input type="text" id="bpTags" placeholder="mindfulness, slow-living">
+              </div>
             </div>
             <div class="fg">
-              <label class="fl">Additional Tags <span style="font-weight:400;color:var(--muted);">(comma-separated)</span></label>
-              <input type="text" id="bpTags" placeholder="mindfulness, slow-living">
+              <label class="fl">Excerpt <span style="font-weight:400;color:var(--muted);">(optional — auto-generated from content if left blank)</span></label>
+              <textarea id="bpExcerpt" rows="2" placeholder="A short teaser shown on the blog card…"></textarea>
             </div>
-          </div>
-          <div class="fg">
-            <label class="fl">Excerpt <span style="font-weight:400;color:var(--muted);">(optional — auto-generated from content if left blank)</span></label>
-            <textarea id="bpExcerpt" rows="2" placeholder="A short teaser shown on the blog card…"></textarea>
-          </div>
-          <div class="fg">
-            <label class="fl">Content <span style="color:var(--accent);">*</span> <span style="font-weight:400;color:var(--muted);">(separate paragraphs with a blank line)</span></label>
-            <textarea id="bpContent" rows="9" placeholder="Write your post here…"></textarea>
-          </div>
-          <div class="fg">
-            <label class="fl">Cover Image <span style="font-weight:400;color:var(--muted);">(optional — falls back to a themed icon card if left blank)</span></label>
-            <div class="upload-drop" onclick="document.getElementById('bpFileInput').click()">
-              <i class="fa-solid fa-cloud-arrow-up" style="font-size:20px;display:block;margin-bottom:6px;"></i>
-              Click to choose a cover image
+            <div class="fg">
+              <label class="fl">Content <span style="color:var(--accent);">*</span> <span style="font-weight:400;color:var(--muted);">(separate paragraphs with a blank line)</span></label>
+              <textarea id="bpContent" rows="9" placeholder="Write your post here…"></textarea>
             </div>
-            <input type="file" id="bpFileInput" accept="image/*" style="display:none;" onchange="handleBpFileSelected(this.files)">
-            <div class="img-upload-grid" id="bpImagePreview"></div>
-          </div>
-          <div class="fg">
-            <label class="fl">Status</label>
-            <div class="status-radio-group" id="bpStatusGroup">
-              <label class="status-radio checked" data-val="draft"><input type="radio" name="bpStatus" value="draft" checked> Draft</label>
-              <label class="status-radio" data-val="scheduled"><input type="radio" name="bpStatus" value="scheduled"> Scheduled</label>
-              <label class="status-radio" data-val="published"><input type="radio" name="bpStatus" value="published"> Published</label>
+            <div class="fg">
+              <label class="fl">Cover Image <span style="font-weight:400;color:var(--muted);">(optional — falls back to a themed icon card if left blank)</span></label>
+              <div class="upload-drop" onclick="document.getElementById('bpFileInput').click()">
+                <i class="fa-solid fa-cloud-arrow-up" style="font-size:20px;display:block;margin-bottom:6px;"></i>
+                Click to choose a cover image
+              </div>
+              <input type="file" id="bpFileInput" accept="image/*" style="display:none;" onchange="handleBpFileSelected(this.files)">
+              <div class="img-upload-grid" id="bpImagePreview"></div>
             </div>
-          </div>
-          <div class="fg schedule-row" id="bpScheduleRow">
-            <label class="fl">Publish On</label>
-            <input type="datetime-local" id="bpPublishAt">
-          </div>
-          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px;">
-            <button class="btn btn-outline" onclick="closeBlogPostModal()">Cancel</button>
-            <button class="btn" id="bpSaveBtn" onclick="saveBlogPost()" style="background:var(--accent);color:#fff;">
-              <i class="fa-solid fa-floppy-disk"></i> Save Blog Post
-            </button>
+            <div class="fg">
+              <label class="fl">Status</label>
+              <div class="status-radio-group" id="bpStatusGroup">
+                <label class="status-radio checked" data-val="draft"><input type="radio" name="bpStatus" value="draft" checked> Draft</label>
+                <label class="status-radio" data-val="scheduled"><input type="radio" name="bpStatus" value="scheduled"> Scheduled</label>
+                <label class="status-radio" data-val="published"><input type="radio" name="bpStatus" value="published"> Published</label>
+              </div>
+            </div>
+            <div class="fg schedule-row" id="bpScheduleRow">
+              <label class="fl">Publish On</label>
+              <input type="datetime-local" id="bpPublishAt">
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px;">
+              <button class="btn btn-outline" onclick="closeBlogPostModal()">Cancel</button>
+              <button class="btn" id="bpSaveBtn" onclick="saveBlogPost()" style="background:var(--accent);color:#fff;">
+                <i class="fa-solid fa-floppy-disk"></i> Save Blog Post
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1400,13 +1440,40 @@
   setInterval(updateClock, 1000);     // then every second
 
   // ── Page switching ────────────────────────────────────────────
-  const pageTitles = { overview: 'Overview', 'photo-posts': 'Photo Posts', 'blog-posts': 'Blog Posts', 'activity-log': 'Activity Log', subscribers: 'Subscribers', 'removed-subscribers': 'Removed Subscribers', contacts: 'Contact Messages', 'removed-messages': 'Removed Messages', newsletter: 'Send Newsletter' };
+  const pageTitles = { 
+    overview: 'Overview', 
+    'photo-posts': 'Photo Posts', 
+    'blog-posts': 'Blog Posts', 
+    'activity-log': 'Activity Log', 
+    subscribers: 'Subscribers', 
+    'removed-subscribers': 'Removed Subscribers', 
+    contacts: 'Contact Messages', 
+    'removed-messages': 'Removed Messages', 
+    newsletter: 'Send Newsletter',
+    'photo-post-create': 'Photo Post Creation',
+    'blog-post-create': 'Blog Post Creation'
+  };
 
   function switchPage(name, el) {
+    const activePage = document.querySelector('.page.active');
+    if (activePage && activePage.id === 'page-photo-post-create') {
+      setStatusRadio('ppStatusGroup', 'draft', 'ppScheduleRow');
+    }
+
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.sb-link').forEach(b => b.classList.remove('active'));
-    document.getElementById('page-' + name).classList.add('active');
-    if (el) el.classList.add('active');
+    
+    const targetPage = document.getElementById('page-' + name);
+    if (targetPage) {
+      targetPage.classList.add('active');
+    }
+    
+    if (el) {
+      el.classList.add('active');
+    } else {
+      const sbLink = document.querySelector(`.sb-link[data-page="${name}"]`);
+      if (sbLink) sbLink.classList.add('active');
+    }
     document.getElementById('pageTitle').textContent = pageTitles[name] || name;
 
     // ✅ FIX: Auto-close sidebar on mobile when navigating
@@ -1414,7 +1481,15 @@
       closeSidebarMobile();
     }
 
-    if (name === 'photo-posts') { loadPhotoPosts(); startPostsAutoRefresh(loadPhotoPosts, 'photoPostModal'); } else if (name === 'blog-posts') { loadBlogPosts(); startPostsAutoRefresh(loadBlogPosts, 'blogPostModal'); } else { stopPostsAutoRefresh(); }
+    if (name === 'photo-posts') { 
+      loadPhotoPosts(); 
+      startPostsAutoRefresh(loadPhotoPosts); 
+    } else if (name === 'blog-posts') { 
+      loadBlogPosts(); 
+      startPostsAutoRefresh(loadBlogPosts); 
+    } else { 
+      stopPostsAutoRefresh(); 
+    }
     if (name === 'activity-log') loadActivityLog();
     if (name === 'subscribers') renderSubsTable();
     if (name === 'removed-subscribers') loadRemovedSubscribers();
@@ -1437,6 +1512,7 @@
     document.getElementById('sbBackdrop').classList.add('show');
   }
 
+  // Toggle sidebar (collapsed mode on desktop vs slide-in on mobile)
   function toggleSidebar() {
     if (window.innerWidth <= 900) {
       const isOpen = document.getElementById('sidebar').classList.contains('open');
@@ -1502,13 +1578,15 @@
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
   let postsAutoRefreshTimer = null;
-  function startPostsAutoRefresh(fn, modalId) {
+  function startPostsAutoRefresh(fn) {
     stopPostsAutoRefresh();
     // Lightweight polling so view counts stay current while you're on the page,
     // without disturbing an in-progress edit.
     postsAutoRefreshTimer = setInterval(() => {
-      const modal = modalId && document.getElementById(modalId);
-      if (modal && modal.style.display === 'flex') return;
+      const activePage = document.querySelector('.page.active');
+      if (activePage && (activePage.id === 'page-photo-post-create' || activePage.id === 'page-blog-post-create')) {
+        return;
+      }
       fn();
     }, 20000);
   }
@@ -1520,12 +1598,10 @@
   //  PHOTO POSTS
   // ═══════════════════════════════════════════════════════════════
   let allPhotoPosts = [];
-  // Unified ordered list of photos for the modal currently open. Each entry is one of:
-  //   { kind: 'existing',  filename, url }  — already saved, uploaded photo
-  //   { kind: 'new',       file }           — freshly chosen local file, not yet uploaded
-  //   { kind: 'pinterest', url }            — direct link to a Pinterest-hosted image
-  // Order in this array = order shown/saved; index 0 is the cover photo.
-  let ppImages = [];
+  let ppSelectedFiles = [];
+  let ppExistingImages = [];
+  let ppRemovedImages = [];
+  let ppPinterestImages = [];
   let pendingDeletePpId = null;
 
   async function loadPhotoPosts() {
@@ -1565,8 +1641,9 @@
   }
 
   function openPhotoPostModal(id) {
-    ppImages = [];
+    ppSelectedFiles = []; ppExistingImages = []; ppRemovedImages = []; ppPinterestImages = [];
     document.getElementById('ppId').value = id || '';
+    document.getElementById('ppPinterestPhotoInput').value = '';
     document.getElementById('ppModalTitle').innerHTML = id
       ? '<i class="fa-solid fa-pen" style="color:var(--accent);"></i> Edit Photo Post'
       : '<i class="fa-solid fa-image" style="color:var(--accent);"></i> New Photo Post';
@@ -1580,10 +1657,7 @@
       document.getElementById('ppTags').value = (p.tags || []).join(', ');
       document.getElementById('ppDescription').value = p.description || '';
       document.getElementById('ppPinterest').value = p.pinterestUrl || '';
-      // Rehydrate saved photos into unified state, keeping their source distinction.
-      ppImages = (p.images || []).map(im => im.source === 'pinterest'
-        ? { kind: 'pinterest', url: im.url }
-        : { kind: 'existing', filename: im.filename, url: im.url });
+      ppExistingImages = (p.images || []).slice();
       setStatusRadio('ppStatusGroup', p.status, 'ppScheduleRow');
       document.getElementById('ppPublishAt').value = p.publishAt ? toLocalInputValue(p.publishAt) : '';
     } else {
@@ -1596,62 +1670,91 @@
       setStatusRadio('ppStatusGroup', 'draft', 'ppScheduleRow');
       document.getElementById('ppPublishAt').value = '';
     }
-    document.getElementById('ppPinterestImageInput').value = '';
     renderPpImagePreview();
-    document.getElementById('photoPostModal').style.display = 'flex';
+    switchPage('photo-post-create');
   }
-  function closePhotoPostModal() { document.getElementById('photoPostModal').style.display = 'none'; }
+  function closePhotoPostModal() { switchPage('photo-posts'); }
 
   function handlePpFilesSelected(fileList) {
     const files = Array.from(fileList);
-    if (ppImages.length + files.length > 10) {
+    if (ppExistingImages.length + ppSelectedFiles.length + ppPinterestImages.length + files.length > 10) {
       showToast('Max 10 images per photo post.', 'error');
       return;
     }
-    files.forEach(f => ppImages.push({ kind: 'new', file: f }));
+    ppSelectedFiles = ppSelectedFiles.concat(files);
     renderPpImagePreview();
     document.getElementById('ppFileInput').value = '';
   }
 
-  // Adds a photo sourced directly from a Pinterest image link (e.g. i.pinimg.com),
-  // alongside any locally uploaded photos already queued for this post.
-  function addPpPinterestImage() {
-    const input = document.getElementById('ppPinterestImageInput');
+  function addPinterestPhoto() {
+    const input = document.getElementById('ppPinterestPhotoInput');
     const url = input.value.trim();
     if (!url) return;
-    if (!/^https?:\/\//i.test(url) || !/(^|\.)pinimg\.com|(^|\.)pinterest\.[a-z.]+/i.test(url)) {
-      showToast('Enter a valid Pinterest image link (e.g. from i.pinimg.com).', 'error');
-      return;
-    }
-    if (ppImages.length >= 10) {
+    if (ppExistingImages.length + ppSelectedFiles.length + ppPinterestImages.length >= 10) {
       showToast('Max 10 images per photo post.', 'error');
       return;
     }
-    if (ppImages.some(img => img.kind === 'pinterest' && img.url === url)) {
-      showToast('That Pinterest photo is already added.', 'error');
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      showToast('Please enter a valid URL starting with http:// or https://', 'error');
       return;
     }
-    ppImages.push({ kind: 'pinterest', url });
-    input.value = '';
+    if (ppPinterestImages.includes(url) || ppExistingImages.some(img => img.url === url)) {
+      showToast('This image link is already added.', 'error');
+      return;
+    }
+    ppPinterestImages.push(url);
     renderPpImagePreview();
+    input.value = '';
   }
 
   function renderPpImagePreview() {
     const wrap = document.getElementById('ppImagePreview');
-    wrap.innerHTML = ppImages.map((img, i) => {
-      const src = img.kind === 'new' ? URL.createObjectURL(img.file) : img.url;
-      const srcBadge = img.kind === 'pinterest' ? '<span class="img-src-badge" title="From Pinterest"><i class="fa-brands fa-pinterest"></i></span>' : '';
-      const coverBadge = i === 0 ? '<span class="img-cover-badge">Cover</span>' : '';
-      return `<div class="img-upload-item">${srcBadge}${coverBadge}<img src="${src}"><button class="rm-btn" onclick="removePpImage(${i})"><i class="fa-solid fa-xmark"></i></button></div>`;
-    }).join('');
+    let html = '';
+    ppExistingImages.forEach(img => {
+      const isPinterest = img.url.startsWith('http') || !img.filename;
+      html += `<div class="img-upload-item">
+        <img src="${img.url}">
+        <span class="img-source-badge">${isPinterest ? 'Pinterest' : 'Local'}</span>
+        <button class="rm-btn" onclick="removePpExistingImage('${img.url}')"><i class="fa-solid fa-xmark"></i></button>
+      </div>`;
+    });
+    ppSelectedFiles.forEach((f, i) => {
+      html += `<div class="img-upload-item">
+        <img src="${URL.createObjectURL(f)}">
+        <span class="img-source-badge">Local (New)</span>
+        <button class="rm-btn" onclick="removePpNewFile(${i})"><i class="fa-solid fa-xmark"></i></button>
+      </div>`;
+    });
+    ppPinterestImages.forEach((url, i) => {
+      html += `<div class="img-upload-item">
+        <img src="${url}">
+        <span class="img-source-badge">Pinterest (New)</span>
+        <button class="rm-btn" onclick="removePpPinterestImage(${i})"><i class="fa-solid fa-xmark"></i></button>
+      </div>`;
+    });
+    wrap.innerHTML = html;
   }
-  function removePpImage(i) { ppImages.splice(i, 1); renderPpImagePreview(); }
+
+  function removePpExistingImage(url) {
+    const img = ppExistingImages.find(im => im.url === url);
+    if (img) {
+      if (img.filename) {
+        ppRemovedImages.push(img.filename);
+      }
+      ppExistingImages = ppExistingImages.filter(im => im.url !== url);
+    }
+    renderPpImagePreview();
+  }
+
+  function removePpNewFile(i) { ppSelectedFiles.splice(i, 1); renderPpImagePreview(); }
+  function removePpPinterestImage(i) { ppPinterestImages.splice(i, 1); renderPpImagePreview(); }
 
   async function savePhotoPost() {
     const id = document.getElementById('ppId').value;
     const title = document.getElementById('ppTitle').value.trim();
     if (!title) { showToast('Title is required.', 'error'); return; }
-    if (ppImages.length === 0) { showToast('At least one photo is required — upload a file or add a Pinterest image link.', 'error'); return; }
+    const totalImages = ppExistingImages.length + ppSelectedFiles.length + ppPinterestImages.length;
+    if (totalImages === 0) { showToast('At least one image is required.', 'error'); return; }
 
     const status = document.querySelector('#ppStatusGroup input:checked').value;
     const publishAt = document.getElementById('ppPublishAt').value;
@@ -1666,17 +1769,11 @@
     fd.append('pinterestUrl', document.getElementById('ppPinterest').value);
     fd.append('status', status);
     if (status === 'scheduled') fd.append('publishAt', new Date(publishAt).toISOString());
-
-    // Describe the final photo order/composition so the server can rebuild it —
-    // 'existing' references a saved upload by filename, 'new' consumes the next
-    // uploaded file in order, 'pinterest' carries the direct image link.
-    const order = ppImages.map(img => {
-      if (img.kind === 'existing') return { type: 'existing', filename: img.filename };
-      if (img.kind === 'pinterest') return { type: 'pinterest', url: img.url };
-      return { type: 'new' };
-    });
-    fd.append('imageOrder', JSON.stringify(order));
-    ppImages.filter(img => img.kind === 'new').forEach(img => fd.append('images', img.file));
+    
+    ppSelectedFiles.forEach(f => fd.append('images', f));
+    fd.append('existingImages', JSON.stringify(ppExistingImages));
+    fd.append('pinterestImages', JSON.stringify(ppPinterestImages));
+    if (id && ppRemovedImages.length) fd.append('removeImages', JSON.stringify(ppRemovedImages));
 
     const btn = document.getElementById('ppSaveBtn');
     btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving…';
@@ -1788,9 +1885,9 @@
       document.getElementById('bpPublishAt').value = '';
     }
     renderBpImagePreview();
-    document.getElementById('blogPostModal').style.display = 'flex';
+    switchPage('blog-post-create');
   }
-  function closeBlogPostModal() { document.getElementById('blogPostModal').style.display = 'none'; }
+  function closeBlogPostModal() { switchPage('blog-posts'); }
 
   function handleBpFileSelected(fileList) {
     if (!fileList.length) return;
@@ -2100,6 +2197,7 @@
     }
   }
 
+  // Clear composer form fields
   function clearNLForm() {
     ['nlSubject','nlPreview','nlHeading','nlBody','nlCta','nlCtaUrl'].forEach(id => {
       document.getElementById(id).value = '';
