@@ -115,6 +115,7 @@ admin.initializeApp({
 });
 
 const db     = admin.firestore();
+db.settings({ preferRest: true });
 const bucket = admin.storage().bucket();
 console.log('✅ Firebase / Firestore connected');
 console.log(`✅ Firebase Storage bucket: ${storageBucket}`);
