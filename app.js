@@ -3,6 +3,11 @@ const dns = require('dns');
 if (dns.setDefaultResultOrder) {
   dns.setDefaultResultOrder('ipv4first');
 }
+try {
+  require('win-ca');
+} catch (e) {
+  // non-Windows fallback
+}
 const express      = require('express');
 const nodemailer   = require('nodemailer');
 const bcrypt       = require('bcryptjs');
@@ -183,6 +188,8 @@ function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 // In-memory cache for public gallery items and blog posts
 let cacheGalleryItems = null;
 let cacheBlogPosts = null;
+let cacheAdminGalleryItems = null;
+let cacheAdminBlogPosts = null;
 
 async function getCachedGalleryItems() {
   if (cacheGalleryItems) return cacheGalleryItems;
@@ -249,10 +256,12 @@ async function getCachedBlogPosts() {
 
 function invalidateGalleryCache() {
   cacheGalleryItems = null;
+  cacheAdminGalleryItems = null;
 }
 
 function invalidateBlogCache() {
   cacheBlogPosts = null;
+  cacheAdminBlogPosts = null;
 }
 
 // A "photo" on a Photo Post can come from local disk (uploaded file) OR be a
@@ -1087,12 +1096,18 @@ function serializeGalleryItem(doc) {
   };
 }
 
+async function getCachedAdminGalleryItems() {
+  if (cacheAdminGalleryItems) return cacheAdminGalleryItems;
+  const snap = await db.collection('gallery_items').orderBy('createdAt', 'desc').get();
+  cacheAdminGalleryItems = snap.docs.map(serializeGalleryItem);
+  return cacheAdminGalleryItems;
+}
+
 // List ALL photo posts (any status) for the admin panel. Search/filter/sort
 // happens client-side in admin.html against this full list.
 app.get('/admin/gallery-items', authMiddleware, async (req, res) => {
   try {
-    const snap = await db.collection('gallery_items').orderBy('createdAt', 'desc').get();
-    const items = snap.docs.map(serializeGalleryItem);
+    const items = await getCachedAdminGalleryItems();
     res.json({ success: true, items, total: items.length });
   } catch (err) {
     console.error('List gallery items error:', err.message);
@@ -1418,10 +1433,16 @@ function serializeBlogPost(doc) {
   };
 }
 
+async function getCachedAdminBlogPosts() {
+  if (cacheAdminBlogPosts) return cacheAdminBlogPosts;
+  const snap = await db.collection('blog_posts').orderBy('createdAt', 'desc').get();
+  cacheAdminBlogPosts = snap.docs.map(serializeBlogPost);
+  return cacheAdminBlogPosts;
+}
+
 app.get('/admin/blog-posts', authMiddleware, async (req, res) => {
   try {
-    const snap = await db.collection('blog_posts').orderBy('createdAt', 'desc').get();
-    const posts = snap.docs.map(serializeBlogPost);
+    const posts = await getCachedAdminBlogPosts();
     res.json({ success: true, posts, total: posts.length });
   } catch (err) {
     console.error('List blog posts error:', err.message);
