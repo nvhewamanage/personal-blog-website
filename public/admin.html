@@ -4,6 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Admin Dashboard — Chanuka Nimsara</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cstyle%3Etext %7B font-family: 'DM Serif Display', serif; font-weight: bold; fill: %231a1a2e; %7D @media (prefers-color-scheme: dark) %7B text %7B fill: %23e8eaf0; %7D %7D%3C/style%3E%3Ctext x='50%25' y='60%25' dominant-baseline='middle' text-anchor='middle' font-size='18'%3ECN%3C/text%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
@@ -768,6 +769,15 @@
             <div class="fg">
               <label class="fl">Pinterest URL</label>
               <input type="url" id="ppPinterest" placeholder="https://www.pinterest.com/pin/…">
+            </div>
+            <div class="fg">
+              <label class="fl">Cover Photo <span style="font-weight:400;color:var(--muted);">(optional override — automatically set to first photo if uploaded)</span></label>
+              <div class="upload-drop" onclick="document.getElementById('ppCoverInput').click()">
+                <i class="fa-solid fa-image" style="font-size:20px;display:block;margin-bottom:6px;"></i>
+                Click to choose a cover photo
+              </div>
+              <input type="file" id="ppCoverInput" accept="image/*" style="display:none;" onchange="handlePpCoverSelected(this.files)">
+              <div class="img-upload-grid" id="ppCoverPreview" style="margin-top: 8px;"></div>
             </div>
             <div class="fg">
               <label class="fl">Photos <span style="color:var(--accent);">*</span> <span style="font-weight:400;color:var(--muted);">(up to 10 — first image is the cover)</span></label>
@@ -1602,6 +1612,9 @@
   let ppExistingImages = [];
   let ppRemovedImages = [];
   let ppPinterestImages = [];
+  let ppCoverFile = null;
+  let ppExistingCover = '';
+  let ppRemoveCover = false;
   let pendingDeletePpId = null;
 
   async function loadPhotoPosts() {
@@ -1642,8 +1655,11 @@
 
   function openPhotoPostModal(id) {
     ppSelectedFiles = []; ppExistingImages = []; ppRemovedImages = []; ppPinterestImages = [];
+    ppCoverFile = null; ppExistingCover = ''; ppRemoveCover = false;
     document.getElementById('ppId').value = id || '';
     document.getElementById('ppPinterestPhotoInput').value = '';
+    document.getElementById('ppFileInput').value = '';
+    document.getElementById('ppCoverInput').value = '';
     document.getElementById('ppModalTitle').innerHTML = id
       ? '<i class="fa-solid fa-pen" style="color:var(--accent);"></i> Edit Photo Post'
       : '<i class="fa-solid fa-image" style="color:var(--accent);"></i> New Photo Post';
@@ -1658,6 +1674,7 @@
       document.getElementById('ppDescription').value = p.description || '';
       document.getElementById('ppPinterest').value = p.pinterestUrl || '';
       ppExistingImages = (p.images || []).slice();
+      ppExistingCover = p.coverImage || '';
       setStatusRadio('ppStatusGroup', p.status, 'ppScheduleRow');
       document.getElementById('ppPublishAt').value = p.publishAt ? toLocalInputValue(p.publishAt) : '';
     } else {
@@ -1671,6 +1688,7 @@
       document.getElementById('ppPublishAt').value = '';
     }
     renderPpImagePreview();
+    renderPpCoverPreview();
     switchPage('photo-post-create');
   }
   function closePhotoPostModal() { switchPage('photo-posts'); }
@@ -1749,12 +1767,49 @@
   function removePpNewFile(i) { ppSelectedFiles.splice(i, 1); renderPpImagePreview(); }
   function removePpPinterestImage(i) { ppPinterestImages.splice(i, 1); renderPpImagePreview(); }
 
+  function handlePpCoverSelected(fileList) {
+    const files = Array.from(fileList);
+    if (files.length > 0) {
+      ppCoverFile = files[0];
+      ppExistingCover = '';
+      ppRemoveCover = false;
+      renderPpCoverPreview();
+    }
+    document.getElementById('ppCoverInput').value = '';
+  }
+
+  function renderPpCoverPreview() {
+    const wrap = document.getElementById('ppCoverPreview');
+    if (ppCoverFile) {
+      wrap.innerHTML = `<div class="img-upload-item">
+        <img src="${URL.createObjectURL(ppCoverFile)}">
+        <span class="img-source-badge">Local (Cover)</span>
+        <button class="rm-btn" onclick="removePpCover()"><i class="fa-solid fa-xmark"></i></button>
+      </div>`;
+    } else if (ppExistingCover && !ppRemoveCover) {
+      wrap.innerHTML = `<div class="img-upload-item">
+        <img src="${ppExistingCover}">
+        <span class="img-source-badge">Existing Cover</span>
+        <button class="rm-btn" onclick="removePpCover()"><i class="fa-solid fa-xmark"></i></button>
+      </div>`;
+    } else {
+      wrap.innerHTML = '';
+    }
+  }
+
+  function removePpCover() {
+    ppCoverFile = null;
+    if (ppExistingCover) ppRemoveCover = true;
+    renderPpCoverPreview();
+  }
+
   async function savePhotoPost() {
     const id = document.getElementById('ppId').value;
     const title = document.getElementById('ppTitle').value.trim();
     if (!title) { showToast('Title is required.', 'error'); return; }
     const totalImages = ppExistingImages.length + ppSelectedFiles.length + ppPinterestImages.length;
-    if (totalImages === 0) { showToast('At least one image is required.', 'error'); return; }
+    const hasCover = ppCoverFile || (ppExistingCover && !ppRemoveCover);
+    if (totalImages === 0 && !hasCover) { showToast('At least one image or cover photo is required.', 'error'); return; }
 
     const status = document.querySelector('#ppStatusGroup input:checked').value;
     const publishAt = document.getElementById('ppPublishAt').value;
@@ -1774,6 +1829,9 @@
     fd.append('existingImages', JSON.stringify(ppExistingImages));
     fd.append('pinterestImages', JSON.stringify(ppPinterestImages));
     if (id && ppRemovedImages.length) fd.append('removeImages', JSON.stringify(ppRemovedImages));
+
+    if (ppCoverFile) fd.append('coverImage', ppCoverFile);
+    if (ppRemoveCover) fd.append('removeCoverImage', 'true');
 
     const btn = document.getElementById('ppSaveBtn');
     btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving…';

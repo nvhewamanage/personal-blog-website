@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Chanuka Nimsara — Personal Website</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cstyle%3Etext %7B font-family: 'DM Serif Display', serif; font-weight: bold; fill: %231a1a2e; %7D @media (prefers-color-scheme: dark) %7B text %7B fill: %23e8eaf0; %7D %7D%3C/style%3E%3Ctext x='50%25' y='60%25' dominant-baseline='middle' text-anchor='middle' font-size='18'%3ECN%3C/text%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
@@ -1050,7 +1051,7 @@
       <div class="sw-label">Find me on</div>
       <div class="sw-links">
         <a href="https://www.instagram.com/chanukanimsara1?igsh=MXVkajNrc2ZkdmVkcw==" class="sw-pill" target="_blank"><i class="fa-brands fa-instagram"></i> Instagram</a>
-        <a href="https://twitter.com/chanukanimsara" class="sw-pill" target="_blank"><i class="fa-brands fa-x"></i> Twitter</a>
+        <a href="https://x.com/ChanukaNim38915" class="sw-pill" target="_blank"><i class="fa-brands fa-x"></i> Twitter</a>
         <a href="https://www.linkedin.com/in/chanukanimsara" class="sw-pill" target="_blank"><i class="fa-brands fa-linkedin-in"></i> LinkedIn</a>
         <a href="https://www.facebook.com/share/1CcS5PaHJd/" class="sw-pill" target="_blank"><i class="fa-brands fa-facebook"></i> Facebook</a>
       </div>
@@ -1300,7 +1301,7 @@
 
 <!-- ═══════════════ FOOTER ═══════════════ -->
 <footer>
-  Copyright© 2026 <span>Chanuka Nimsara</span> - All Rights Reserved.
+  Copyright© 2026 <a href="/" style="color: var(--accent); text-decoration: none; font-weight: 600;">Chanuka Nimsara</a> - All Rights Reserved.
 </footer>
 
 <!-- ═══════════════ LETS TALK BUTTON ═══════════════ -->
@@ -1519,8 +1520,8 @@
         data-id="${it.id}" data-title="${escAttr(it.title)}" data-images='${escAttr(JSON.stringify(it.images))}'
         data-pin="${escAttr(it.pinterestUrl)}" data-cat="${escAttr(it.category)}"
         data-bg="${escAttr(it.bg)}" data-icon="${escAttr(it.icon)}"
-        data-views="${it.views}" data-likes="${it.likes}">
-        <div class="g-ph" style="background:${it.bg}"><i class="fa-solid ${it.icon}"></i><span>${escHtml(it.title)}</span></div>
+        data-views="${it.views}" data-likes="${it.likes}" data-cover="${escAttr(it.coverImage)}">
+        <div class="g-ph" style="${it.coverImage ? `background-image: url('${it.coverImage}'); background-size: cover; background-position: center;` : `background:${it.bg};`}">${it.coverImage ? '' : `<i class="fa-solid ${it.icon}"></i><span>${escHtml(it.title)}</span>`}</div>
         <div class="g-ov">
           <p>${escHtml(it.title)}</p>
           <span>${escHtml(it.category)}</span>
@@ -1546,7 +1547,7 @@
     const thumb = document.getElementById('gModalThumb');
     let images = [];
     try { images = JSON.parse(el.dataset.images || '[]'); } catch { images = []; }
-    if (!images.length) images = [DEFAULT_GALLERY_COVER];
+    if (!images.length) images = [el.dataset.cover || DEFAULT_GALLERY_COVER];
     gModalImages = images;
     gModalIndex = 0;
 
@@ -1654,7 +1655,10 @@
         data-date="${escAttr(p.date)}" data-read="${escAttr(p.read)}"
         data-bg="${escAttr(p.bg)}" data-icon="${escAttr(p.icon)}" data-cover="${escAttr(p.coverImage)}"
         data-content="${escAttr(p.content)}" data-views="${p.views}" data-likes="${p.likes}">
-        <div class="bc-thumb" style="background:${p.bg}"><i class="fa-solid ${p.icon}"></i></div>
+        ${p.coverImage 
+          ? `<div class="bc-thumb" style="background:#fff;"><img src="${p.coverImage}" alt="${escAttr(p.title)}" style="width:100%;height:100%;object-fit:cover;display:block;"></div>`
+          : `<div class="bc-thumb" style="background:${p.bg}"><i class="fa-solid ${p.icon}"></i></div>`
+        }
         <div class="bc-body">
           <span class="btag">${escHtml(p.tag)}</span>
           <h3 class="bc-title">${escHtml(p.title)}</h3>
