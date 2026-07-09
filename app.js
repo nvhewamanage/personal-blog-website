@@ -1,4 +1,8 @@
 require('dotenv').config();
+const dns = require('dns');
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
 const express      = require('express');
 const nodemailer   = require('nodemailer');
 const bcrypt       = require('bcryptjs');
@@ -67,10 +71,10 @@ const imageFileFilter = (req, file, cb) => {
   else cb(new Error('Only JPG, PNG, WEBP, or GIF images are allowed.'));
 };
 
-// Photo posts: up to 10 images per post
+// Photo posts: up to 10 images per post + 1 cover image
 const galleryUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 100 * 1024 * 1024, files: 10 },
+  limits: { fileSize: 100 * 1024 * 1024, files: 12 },
   fileFilter: imageFileFilter,
 });
 // Blog posts: single cover image
@@ -175,6 +179,81 @@ function tsToIso(ts) {
 
 function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
+// In-memory cache for public gallery items and blog posts
+let cacheGalleryItems = null;
+let cacheBlogPosts = null;
+
+async function getCachedGalleryItems() {
+  if (cacheGalleryItems) return cacheGalleryItems;
+  const snap = await db.collection('gallery_items')
+    .where('status', '==', 'published')
+    .get();
+  const items = snap.docs.map(doc => {
+    const d = doc.data();
+    const meta = GALLERY_CATEGORY_META[d.category] || GALLERY_CATEGORY_META.Travel;
+    const created = d.createdAt?.toDate ? d.createdAt.toDate() : new Date();
+    return {
+      id: doc.id,
+      title: d.title,
+      category: d.category,
+      filterKey: (d.category || 'Travel').toLowerCase(),
+      layout: d.layout || 'normal',
+      images: (d.images || []).map(im => im.url),
+      pinterestUrl: d.pinterestUrl || '',
+      icon: meta.icon,
+      bg: meta.bg,
+      createdTime: created.getTime(),
+      views: d.views || 0,
+      likes: d.likes || 0,
+      coverImage: d.coverImage || '',
+    };
+  });
+  items.sort((a, b) => b.createdTime - a.createdTime);
+  cacheGalleryItems = items.slice(0, GALLERY_DISPLAY_LIMIT);
+  return cacheGalleryItems;
+}
+
+async function getCachedBlogPosts() {
+  if (cacheBlogPosts) return cacheBlogPosts;
+  const snap = await db.collection('blog_posts')
+    .where('status', '==', 'published')
+    .get();
+  const posts = snap.docs.map(doc => {
+    const d = doc.data();
+    const created = d.createdAt?.toDate ? d.createdAt.toDate() : new Date();
+    return {
+      id: doc.id,
+      title: d.title,
+      tag: d.tag,
+      excerpt: d.excerpt,
+      content: d.content,
+      read: d.read,
+      coverImage: d.coverImage || '',
+      icon: d.icon || 'fa-pen-nib',
+      bg: d.bg || BLOG_BG_POOL[0],
+      date: created.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      createdTime: created.getTime(),
+      views: d.views || 0,
+      likes: d.likes || 0,
+    };
+  });
+  posts.sort((a, b) => b.createdTime - a.createdTime);
+  const limitedPosts = posts.slice(0, BLOG_DISPLAY_LIMIT);
+  limitedPosts.forEach((p, i) => {
+    p.featured = (i === 0);
+  });
+  cacheBlogPosts = limitedPosts;
+  return cacheBlogPosts;
+}
+
+function invalidateGalleryCache() {
+  cacheGalleryItems = null;
+}
+
+function invalidateBlogCache() {
+  cacheBlogPosts = null;
+}
+
 // A "photo" on a Photo Post can come from local disk (uploaded file) OR be a
 // direct link to an image hosted on Pinterest. This validates the latter so
 // only genuine Pinterest-hosted image URLs are accepted (not just any link).
@@ -216,6 +295,8 @@ async function publishDuePosts() {
         if (data.publishAt && data.publishAt.toMillis() <= now.toMillis()) {
           await doc.ref.update({ status: 'published', updatedAt: admin.firestore.FieldValue.serverTimestamp() });
           await logActivity('publish', entityType, doc.id, data.title, 'system', 'Auto-published on schedule');
+          if (entityType === 'gallery_item') invalidateGalleryCache();
+          if (entityType === 'blog_post') invalidateBlogCache();
         }
       }
     } catch (err) {
@@ -919,6 +1000,8 @@ function serializeGalleryItem(doc) {
     createdAt: tsToIso(d.createdAt),
     updatedAt: tsToIso(d.updatedAt),
     views: d.views || 0,
+    coverImage: d.coverImage || '',
+    coverImagePath: d.coverImagePath || '',
     createdBy: d.createdBy || 'admin',
     updatedBy: d.updatedBy || d.createdBy || 'admin',
   };
@@ -939,16 +1022,18 @@ app.get('/admin/gallery-items', authMiddleware, async (req, res) => {
 
 // Create a photo post — multipart form. Photos can be uploaded files and/or
 // direct Pinterest image links, mixed freely, up to 10 total. `imageOrder`
-// (JSON array of {type:'new'} | {type:'pinterest', url}) describes the final
-// ordering the admin composed in the UI; the first entry is the cover photo.
-app.post('/admin/gallery-items', authMiddleware, galleryUpload.array('images', 10), async (req, res) => {
+// describes the final ordering the admin composed in the UI.
+app.post('/admin/gallery-items', authMiddleware, galleryUpload.fields([{ name: 'images', maxCount: 10 }, { name: 'coverImage', maxCount: 1 }]), async (req, res) => {
   try {
     const { title, category, layout, description, tags, pinterestUrl, status, publishAt, imageOrder } = req.body;
     if (!title || !title.trim())
       return res.status(400).json({ success: false, error: 'Title is required.' });
 
+    const imageFiles = req.files && req.files['images'] ? req.files['images'] : [];
+    const coverFile = req.files && req.files['coverImage'] ? req.files['coverImage'][0] : null;
+
     const uploadedFiles = [];
-    for (const f of (req.files || [])) {
+    for (const f of imageFiles) {
       const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
       const ext = path.extname(f.originalname).toLowerCase() || '.jpg';
       const storagePath = `gallery/${unique}${ext}`;
@@ -970,14 +1055,25 @@ app.post('/admin/gallery-items', authMiddleware, galleryUpload.array('images', 1
           images.push({ url: token.url, filename: null, source: 'pinterest' });
         }
       }
-      // Safety net: include any uploaded files the client didn't reference in imageOrder.
       if (uploadIdx < uploadedFiles.length) images = images.concat(uploadedFiles.slice(uploadIdx));
     } else {
       images = uploadedFiles;
     }
 
-    if (images.length === 0)
-      return res.status(400).json({ success: false, error: 'At least one photo is required — upload a file or add a Pinterest image link.' });
+    let coverImage = '';
+    let coverImagePath = '';
+    if (coverFile) {
+      const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      const ext = path.extname(coverFile.originalname).toLowerCase() || '.jpg';
+      coverImagePath = `gallery/${unique}_cover${ext}`;
+      coverImage = await uploadBufferToStorage(coverFile.buffer, coverImagePath, coverFile.mimetype);
+    } else if (images.length > 0) {
+      coverImage = images[0].url;
+      coverImagePath = images[0].filename || '';
+    }
+
+    if (images.length === 0 && !coverImage)
+      return res.status(400).json({ success: false, error: 'At least one photo or cover photo is required.' });
     if (images.length > 10)
       return res.status(400).json({ success: false, error: 'Max 10 images per photo post.' });
 
@@ -989,6 +1085,8 @@ app.post('/admin/gallery-items', authMiddleware, galleryUpload.array('images', 1
       category: GALLERY_CATEGORY_META[category] ? category : 'Travel',
       layout: ['normal', 'tall', 'wide'].includes(layout) ? layout : 'normal',
       images,
+      coverImage,
+      coverImagePath,
       description: (description || '').trim(),
       tags: tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : [],
       pinterestUrl: pinterestUrl || '',
@@ -997,11 +1095,13 @@ app.post('/admin/gallery-items', authMiddleware, galleryUpload.array('images', 1
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       views: 0,
+      likes: 0,
       createdBy: actor,
       updatedBy: actor,
     });
 
     await logActivity('create', 'gallery_item', docRef.id, title.trim(), actor, `Created as ${finalStatus}`);
+    invalidateGalleryCache();
     res.json({ success: true, id: docRef.id });
   } catch (err) {
     console.error('Create gallery item error:', err.message);
@@ -1010,13 +1110,8 @@ app.post('/admin/gallery-items', authMiddleware, galleryUpload.array('images', 1
 });
 
 // Edit a photo post — photos can be a mix of uploaded files and Pinterest
-// image links. `imageOrder` (JSON array of {type:'existing', filename} |
-// {type:'new'} | {type:'pinterest', url}) describes the final composition
-// and order the admin arranged in the UI; anything dropped from that order
-// is treated as removed (and its file deleted from disk, if any).
-// `removeImages` (legacy JSON array of filenames) is still honored as a
-// fallback when imageOrder isn't sent.
-app.put('/admin/gallery-items/:id', authMiddleware, galleryUpload.array('images', 10), async (req, res) => {
+// image links. `imageOrder` describes the final composition.
+app.put('/admin/gallery-items/:id', authMiddleware, galleryUpload.fields([{ name: 'images', maxCount: 10 }, { name: 'coverImage', maxCount: 1 }]), async (req, res) => {
   try {
     const docRef = db.collection('gallery_items').doc(req.params.id);
     const doc = await docRef.get();
@@ -1024,11 +1119,14 @@ app.put('/admin/gallery-items/:id', authMiddleware, galleryUpload.array('images'
     const existing = doc.data();
     const actor = req.admin?.username || 'admin';
 
-    const { title, category, layout, description, tags, pinterestUrl, status, publishAt, imageOrder, removeImages } = req.body;
+    const { title, category, layout, description, tags, pinterestUrl, status, publishAt, imageOrder, removeImages, removeCoverImage } = req.body;
+
+    const imageFiles = req.files && req.files['images'] ? req.files['images'] : [];
+    const coverFile = req.files && req.files['coverImage'] ? req.files['coverImage'][0] : null;
 
     const existingImages = existing.images || [];
     const uploadedFiles = [];
-    for (const f of (req.files || [])) {
+    for (const f of imageFiles) {
       const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
       const ext = path.extname(f.originalname).toLowerCase() || '.jpg';
       const storagePath = `gallery/${unique}${ext}`;
@@ -1057,7 +1155,6 @@ app.put('/admin/gallery-items/:id', authMiddleware, galleryUpload.array('images'
           images.push({ url: token.url, filename: null, source: 'pinterest' });
         }
       }
-      // Safety net: include any uploaded files the client didn't reference.
       if (uploadIdx < uploadedFiles.length) images = images.concat(uploadedFiles.slice(uploadIdx));
 
       // Delete storage assets for any existing images that were dropped from the order.
@@ -1068,7 +1165,6 @@ app.put('/admin/gallery-items/:id', authMiddleware, galleryUpload.array('images'
         }
       }
     } else {
-      // Legacy path (no imageOrder sent): keep existing behavior.
       images = existingImages;
       if (removeImages) {
         let toRemove = [];
@@ -1081,8 +1177,32 @@ app.put('/admin/gallery-items/:id', authMiddleware, galleryUpload.array('images'
       images = images.concat(uploadedFiles);
     }
 
-    if (images.length === 0)
-      return res.status(400).json({ success: false, error: 'A photo post needs at least one photo — upload a file or add a Pinterest image link.' });
+    let coverImage = existing.coverImage || '';
+    let coverImagePath = existing.coverImagePath || '';
+
+    if (removeCoverImage === 'true' && coverImage) {
+      if (coverImagePath && coverImagePath !== coverImage) {
+        await deleteImageAsset(coverImagePath);
+      }
+      coverImage = '';
+      coverImagePath = '';
+    }
+
+    if (coverFile) {
+      if (coverImagePath && coverImagePath !== coverImage) {
+        await deleteImageAsset(coverImagePath);
+      }
+      const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      const ext = path.extname(coverFile.originalname).toLowerCase() || '.jpg';
+      coverImagePath = `gallery/${unique}_cover${ext}`;
+      coverImage = await uploadBufferToStorage(coverFile.buffer, coverImagePath, coverFile.mimetype);
+    } else if (!coverImage && images.length > 0) {
+      coverImage = images[0].url;
+      coverImagePath = images[0].filename || '';
+    }
+
+    if (images.length === 0 && !coverImage)
+      return res.status(400).json({ success: false, error: 'A photo post needs at least one photo or cover photo.' });
     if (images.length > 10)
       return res.status(400).json({ success: false, error: 'Max 10 images per photo post.' });
 
@@ -1093,6 +1213,8 @@ app.put('/admin/gallery-items/:id', authMiddleware, galleryUpload.array('images'
       category: category && GALLERY_CATEGORY_META[category] ? category : existing.category,
       layout: layout && ['normal', 'tall', 'wide'].includes(layout) ? layout : existing.layout,
       images,
+      coverImage,
+      coverImagePath,
       description: description !== undefined ? description.trim() : existing.description,
       tags: tags !== undefined ? tags.split(',').map(t => t.trim()).filter(Boolean) : existing.tags,
       pinterestUrl: pinterestUrl !== undefined ? pinterestUrl : existing.pinterestUrl,
@@ -1103,6 +1225,7 @@ app.put('/admin/gallery-items/:id', authMiddleware, galleryUpload.array('images'
     });
 
     await logActivity('update', 'gallery_item', req.params.id, title || existing.title, actor, `Updated (${finalStatus})`);
+    invalidateGalleryCache();
     res.json({ success: true });
   } catch (err) {
     console.error('Update gallery item error:', err.message);
@@ -1123,6 +1246,7 @@ app.delete('/admin/gallery-items/:id', authMiddleware, async (req, res) => {
     }
     await docRef.delete();
     await logActivity('delete', 'gallery_item', req.params.id, data.title, req.admin?.username || 'admin', 'Deleted permanently');
+    invalidateGalleryCache();
     res.json({ success: true });
   } catch (err) {
     console.error('Delete gallery item error:', err.message);
@@ -1133,32 +1257,8 @@ app.delete('/admin/gallery-items/:id', authMiddleware, async (req, res) => {
 // Public feed — only published posts, newest first, capped at the display limit.
 app.get('/api/gallery-items', async (req, res) => {
   try {
-    const snap = await db.collection('gallery_items')
-      .where('status', '==', 'published')
-      .get();
-    const items = snap.docs.map(doc => {
-      const d = doc.data();
-      const meta = GALLERY_CATEGORY_META[d.category] || GALLERY_CATEGORY_META.Travel;
-      const created = d.createdAt?.toDate ? d.createdAt.toDate() : new Date();
-      return {
-        id: doc.id,
-        title: d.title,
-        category: d.category,
-        filterKey: (d.category || 'Travel').toLowerCase(),
-        layout: d.layout || 'normal',
-        images: (d.images || []).map(im => im.url),
-        pinterestUrl: d.pinterestUrl || '',
-        icon: meta.icon,
-        bg: meta.bg,
-        createdTime: created.getTime(),
-        views: d.views || 0,
-        likes: d.likes || 0,
-      };
-    });
-    // Sort in-memory by createdTime descending
-    items.sort((a, b) => b.createdTime - a.createdTime);
-    const limitedItems = items.slice(0, GALLERY_DISPLAY_LIMIT);
-    res.json({ success: true, items: limitedItems });
+    const items = await getCachedGalleryItems();
+    res.json({ success: true, items });
   } catch (err) {
     console.error('Public gallery fetch error:', err.message);
     res.status(500).json({ success: false, error: 'Failed to load gallery.' });
@@ -1169,6 +1269,10 @@ app.get('/api/gallery-items', async (req, res) => {
 app.post('/api/gallery-items/:id/view', publicLimiter, async (req, res) => {
   try {
     await db.collection('gallery_items').doc(req.params.id).update({ views: admin.firestore.FieldValue.increment(1) });
+    if (cacheGalleryItems) {
+      const cached = cacheGalleryItems.find(it => it.id === req.params.id);
+      if (cached) cached.views = (cached.views || 0) + 1;
+    }
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false });
@@ -1179,6 +1283,10 @@ app.post('/api/gallery-items/:id/view', publicLimiter, async (req, res) => {
 app.post('/api/gallery-items/:id/like', publicLimiter, async (req, res) => {
   try {
     await db.collection('gallery_items').doc(req.params.id).update({ likes: admin.firestore.FieldValue.increment(1) });
+    if (cacheGalleryItems) {
+      const cached = cacheGalleryItems.find(it => it.id === req.params.id);
+      if (cached) cached.likes = (cached.likes || 0) + 1;
+    }
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false });
@@ -1263,6 +1371,7 @@ app.post('/admin/blog-posts', authMiddleware, blogUpload.single('coverImage'), a
     });
 
     await logActivity('create', 'blog_post', docRef.id, title.trim(), actor, `Created as ${finalStatus}`);
+    invalidateBlogCache();
     res.json({ success: true, id: docRef.id });
   } catch (err) {
     console.error('Create blog post error:', err.message);
@@ -1316,6 +1425,7 @@ app.put('/admin/blog-posts/:id', authMiddleware, blogUpload.single('coverImage')
     });
 
     await logActivity('update', 'blog_post', req.params.id, title || existing.title, actor, `Updated (${finalStatus})`);
+    invalidateBlogCache();
     res.json({ success: true });
   } catch (err) {
     console.error('Update blog post error:', err.message);
@@ -1334,6 +1444,7 @@ app.delete('/admin/blog-posts/:id', authMiddleware, async (req, res) => {
     }
     await docRef.delete();
     await logActivity('delete', 'blog_post', req.params.id, data.title, req.admin?.username || 'admin', 'Deleted permanently');
+    invalidateBlogCache();
     res.json({ success: true });
   } catch (err) {
     console.error('Delete blog post error:', err.message);
@@ -1344,36 +1455,8 @@ app.delete('/admin/blog-posts/:id', authMiddleware, async (req, res) => {
 // Public feed — only published posts, newest first, capped at the display limit.
 app.get('/api/blog-posts', async (req, res) => {
   try {
-    const snap = await db.collection('blog_posts')
-      .where('status', '==', 'published')
-      .get();
-    const posts = snap.docs.map(doc => {
-      const d = doc.data();
-      const created = d.createdAt?.toDate ? d.createdAt.toDate() : new Date();
-      return {
-        id: doc.id,
-        title: d.title,
-        tag: d.tag,
-        excerpt: d.excerpt,
-        content: d.content,
-        read: d.read,
-        coverImage: d.coverImage || '',
-        icon: d.icon || 'fa-pen-nib',
-        bg: d.bg || BLOG_BG_POOL[0],
-        date: created.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        createdTime: created.getTime(),
-        views: d.views || 0,
-        likes: d.likes || 0,
-      };
-    });
-    // Sort in-memory by createdTime descending
-    posts.sort((a, b) => b.createdTime - a.createdTime);
-    const limitedPosts = posts.slice(0, BLOG_DISPLAY_LIMIT);
-    // Assign featured flag to the newest post (index 0)
-    limitedPosts.forEach((p, i) => {
-      p.featured = (i === 0);
-    });
-    res.json({ success: true, posts: limitedPosts });
+    const posts = await getCachedBlogPosts();
+    res.json({ success: true, posts });
   } catch (err) {
     console.error('Public blog fetch error:', err.message);
     res.status(500).json({ success: false, error: 'Failed to load blog posts.' });
@@ -1383,6 +1466,10 @@ app.get('/api/blog-posts', async (req, res) => {
 app.post('/api/blog-posts/:id/view', publicLimiter, async (req, res) => {
   try {
     await db.collection('blog_posts').doc(req.params.id).update({ views: admin.firestore.FieldValue.increment(1) });
+    if (cacheBlogPosts) {
+      const cached = cacheBlogPosts.find(p => p.id === req.params.id);
+      if (cached) cached.views = (cached.views || 0) + 1;
+    }
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false });
@@ -1393,6 +1480,10 @@ app.post('/api/blog-posts/:id/view', publicLimiter, async (req, res) => {
 app.post('/api/blog-posts/:id/like', publicLimiter, async (req, res) => {
   try {
     await db.collection('blog_posts').doc(req.params.id).update({ likes: admin.firestore.FieldValue.increment(1) });
+    if (cacheBlogPosts) {
+      const cached = cacheBlogPosts.find(p => p.id === req.params.id);
+      if (cached) cached.likes = (cached.likes || 0) + 1;
+    }
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false });
