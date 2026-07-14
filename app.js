@@ -387,30 +387,35 @@ app.post('/send-message', publicLimiter, async (req, res) => {
       received_at: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    await transporter.sendMail({
-      from:    `"${name}" <${process.env.GMAIL_USER}>`,
-      to:      process.env.GMAIL_USER,
-      replyTo: email,
-      subject: `[Blog Contact] ${subject}`,
-      html: `
-        <div style="font-family:sans-serif;max-width:560px;">
-          <h2 style="color:#4f46e5;">New message from your blog</h2>
-          <table style="width:100%;border-collapse:collapse;">
-            <tr><td style="padding:8px;font-weight:bold;width:90px;">Name</td><td style="padding:8px;">${name}</td></tr>
-            <tr style="background:#f5f5f5;"><td style="padding:8px;font-weight:bold;">Email</td><td style="padding:8px;"><a href="mailto:${email}">${email}</a></td></tr>
-            <tr><td style="padding:8px;font-weight:bold;">Subject</td><td style="padding:8px;">${subject}</td></tr>
-          </table>
-          <div style="margin-top:20px;padding:16px;background:#f9f9f9;border-left:4px solid #4f46e5;border-radius:4px;">
-            <p style="margin:0;white-space:pre-wrap;">${message}</p>
+    // Send email notification in the background (non-blocking) so that email delivery
+    // failures do not block or crash the contact form submission.
+    if (process.env.GMAIL_USER && process.env.GMAIL_PASS) {
+      transporter.sendMail({
+        from:    `"${name}" <${process.env.GMAIL_USER}>`,
+        to:      process.env.GMAIL_USER,
+        replyTo: email,
+        subject: `[Blog Contact] ${subject}`,
+        html: `
+          <div style="font-family:sans-serif;max-width:560px;">
+            <h2 style="color:#4f46e5;">New message from your blog</h2>
+            <table style="width:100%;border-collapse:collapse;">
+              <tr><td style="padding:8px;font-weight:bold;width:90px;">Name</td><td style="padding:8px;">${name}</td></tr>
+              <tr style="background:#f5f5f5;"><td style="padding:8px;font-weight:bold;">Email</td><td style="padding:8px;"><a href="mailto:${email}">${email}</a></td></tr>
+              <tr><td style="padding:8px;font-weight:bold;">Subject</td><td style="padding:8px;">${subject}</td></tr>
+            </table>
+            <div style="margin-top:20px;padding:16px;background:#f9f9f9;border-left:4px solid #4f46e5;border-radius:4px;">
+              <p style="margin:0;white-space:pre-wrap;">${message}</p>
+            </div>
+            <p style="margin-top:24px;font-size:12px;color:#999;">Sent via your personal blog contact form.</p>
           </div>
-          <p style="margin-top:24px;font-size:12px;color:#999;">Sent via your personal blog contact form.</p>
-        </div>
-      `,
-    });
+        `,
+      }).catch(err => console.error('Contact email notification error (non-blocking):', err.message));
+    }
+
     res.json({ success: true });
   } catch (err) {
-    console.error('Contact email error:', err.message);
-    res.status(500).json({ success: false, error: 'Failed to send email.' });
+    console.error('Contact message database save error:', err.message);
+    res.status(500).json({ success: false, error: 'Failed to send message.' });
   }
 });
 
