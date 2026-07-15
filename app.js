@@ -392,7 +392,7 @@ app.post('/send-message', publicLimiter, async (req, res) => {
     if (process.env.GMAIL_USER && process.env.GMAIL_PASS) {
       transporter.sendMail({
         from:    `"${name}" <${process.env.GMAIL_USER}>`,
-        to:      process.env.GMAIL_USER,
+        to:      process.env.OWNER_EMAIL || process.env.GMAIL_USER,
         replyTo: email,
         subject: `[Blog Contact] ${subject}`,
         html: `
@@ -574,7 +574,7 @@ app.post('/subscribe', publicLimiter, async (req, res) => {
 
       transporter.sendMail({
         from:    process.env.GMAIL_USER,
-        to:      process.env.GMAIL_USER,
+        to:      process.env.OWNER_EMAIL || process.env.GMAIL_USER,
         subject: '📬 New Newsletter Subscriber',
         text:    `New subscriber: ${normalizedEmail}`,
       }).catch(err => console.error('Admin notify email failed:', err.message));
