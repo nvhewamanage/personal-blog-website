@@ -1483,7 +1483,7 @@
         emailInput.value = "";
         setTimeout(() => { formDiv.style.display = "flex"; thanksMsg.style.display = "none"; }, 5000);
       } else {
-        alert("Subscription failed. Please try again.");
+        alert(result.error || "Subscription failed. Please try again.");
       }
     } catch {
       alert("Network error. Please try again.");
