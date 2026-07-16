@@ -9,7 +9,6 @@ try {
   // non-Windows fallback
 }
 const express      = require('express');
-const nodemailer   = require('nodemailer');
 const bcrypt       = require('bcryptjs');
 const jwt          = require('jsonwebtoken');
 const admin        = require('firebase-admin');
@@ -24,6 +23,10 @@ const path         = require('path');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
+
+// Render sits behind a reverse proxy that sets X-Forwarded-For; trust it so
+// express-rate-limit (and req.ip) see the real client IP instead of Render's.
+app.set('trust proxy', 1);
 
 // ─── Security Middleware ───────────────────────────────────────
 
@@ -334,14 +337,38 @@ async function initAdminUser() {
   }
 }
 
-// ─── Gmail Transporter ────────────────────────────────────────
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASS,
-  },
-});
+// ─── Email sending (Resend HTTP API) ───────────────────────────
+// Render's free tier blocks outbound SMTP ports (25/465/587), so email is
+// sent over Resend's HTTPS API instead of raw SMTP — HTTPS is never blocked.
+// Set RESEND_API_KEY (from resend.com) and RESEND_FROM_EMAIL (an address on
+// a domain you've verified with Resend) in your environment.
+const EMAIL_ENABLED  = !!process.env.RESEND_API_KEY;
+const RESEND_FROM    = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+const OWNER_INBOX    = process.env.OWNER_EMAIL || process.env.GMAIL_USER;
+
+async function sendEmail({ from, to, bcc, replyTo, subject, html, text }) {
+  const payload = { from: from || RESEND_FROM, subject };
+  if (to)      payload.to       = Array.isArray(to)  ? to  : [to];
+  if (bcc)     payload.bcc      = Array.isArray(bcc) ? bcc : [bcc];
+  if (replyTo) payload.reply_to = replyTo;
+  if (html)    payload.html     = html;
+  if (text)    payload.text     = text;
+
+  const resp = await fetch('https://api.resend.com/emails', {
+    method:  'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+      'Content-Type':  'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!resp.ok) {
+    const errText = await resp.text().catch(() => '');
+    throw new Error(`Resend API error (${resp.status}): ${errText}`);
+  }
+  return resp.json();
+}
 
 // ─── JWT Middleware ───────────────────────────────────────────
 function authMiddleware(req, res, next) {
@@ -389,10 +416,10 @@ app.post('/send-message', publicLimiter, async (req, res) => {
 
     // Send email notification in the background (non-blocking) so that email delivery
     // failures do not block or crash the contact form submission.
-    if (process.env.GMAIL_USER && process.env.GMAIL_PASS) {
-      transporter.sendMail({
-        from:    `"${name}" <${process.env.GMAIL_USER}>`,
-        to:      process.env.OWNER_EMAIL || process.env.GMAIL_USER,
+    if (EMAIL_ENABLED) {
+      sendEmail({
+        from:    `"${name} via Blog" <${RESEND_FROM}>`,
+        to:      OWNER_INBOX,
         replyTo: email,
         subject: `[Blog Contact] ${subject}`,
         html: `
@@ -564,22 +591,22 @@ app.post('/subscribe', publicLimiter, async (req, res) => {
     res.json({ success: true });
 
     // Background emails (non-blocking)
-    if (process.env.GMAIL_USER && process.env.GMAIL_PASS) {
-      transporter.sendMail({
-        from:    `"Chanuka Nimsara" <${process.env.GMAIL_USER}>`,
+    if (EMAIL_ENABLED) {
+      sendEmail({
+        from:    `"Chanuka Nimsara" <${RESEND_FROM}>`,
         to:      normalizedEmail,
         subject: '🎉 Welcome to the Sunday Letter!',
         html:    buildWelcomeEmail(normalizedEmail),
       }).catch(err => console.error('Welcome email failed:', err.message));
 
-      transporter.sendMail({
-        from:    process.env.GMAIL_USER,
-        to:      process.env.OWNER_EMAIL || process.env.GMAIL_USER,
+      sendEmail({
+        from:    RESEND_FROM,
+        to:      OWNER_INBOX,
         subject: '📬 New Newsletter Subscriber',
         text:    `New subscriber: ${normalizedEmail}`,
       }).catch(err => console.error('Admin notify email failed:', err.message));
     } else {
-      console.log(`ℹ️  New subscriber saved: ${normalizedEmail} (email not sent — GMAIL_USER/GMAIL_PASS not configured)`);
+      console.log(`ℹ️  New subscriber saved: ${normalizedEmail} (email not sent — RESEND_API_KEY not configured)`);
     }
 
   } catch (err) {
@@ -764,8 +791,9 @@ app.post('/admin/send-newsletter', authMiddleware, async (req, res) => {
     let sent = 0;
     for (let i = 0; i < emails.length; i += BATCH) {
       const batch = emails.slice(i, i + BATCH);
-      await transporter.sendMail({
-        from:    `"Chanuka Nimsara" <${process.env.GMAIL_USER}>`,
+      await sendEmail({
+        from:    `"Chanuka Nimsara" <${RESEND_FROM}>`,
+        to:      OWNER_INBOX,
         bcc:     batch,
         subject,
         html,
@@ -873,8 +901,9 @@ app.post('/admin/newsletters/:id/resend', authMiddleware, async (req, res) => {
     const BATCH = 50;
     let sent = 0;
     for (let i = 0; i < emails.length; i += BATCH) {
-      await transporter.sendMail({
-        from:    `"Chanuka Nimsara" <${process.env.GMAIL_USER}>`,
+      await sendEmail({
+        from:    `"Chanuka Nimsara" <${RESEND_FROM}>`,
+        to:      OWNER_INBOX,
         bcc:     emails.slice(i, i + BATCH),
         subject: n.subject,
         html,
@@ -1038,8 +1067,9 @@ async function triggerAutomaticPostNewsletter(entityType, docId, data) {
     let sent = 0;
     for (let i = 0; i < emails.length; i += BATCH) {
       const batch = emails.slice(i, i + BATCH);
-      await transporter.sendMail({
-        from:    `"Chanuka Nimsara" <${process.env.GMAIL_USER}>`,
+      await sendEmail({
+        from:    `"Chanuka Nimsara" <${RESEND_FROM}>`,
+        to:      OWNER_INBOX,
         bcc:     batch,
         subject,
         html,
