@@ -956,7 +956,7 @@ function buildWelcomeEmail(email) {
             Your first letter arrives this Sunday. Stay curious. ✨
           </p>
           <div style="text-align:center;">
-            <a href="${process.env.SITE_URL || 'http://localhost:3000'}"
+            <a href="${process.env.SITE_URL || 'https://www.chanukanimsara.com'}"
                style="display:inline-block;background:#e8154a;color:#fff;text-decoration:none;padding:14px 36px;border-radius:50px;font-size:15px;font-weight:600;">
               Visit the Blog →
             </a>
@@ -968,7 +968,7 @@ function buildWelcomeEmail(email) {
         </td></tr>
       </table>
       <p style="margin:24px 0 0;color:#9ca3af;font-size:12px;text-align:center;">
-        © 2026 Chanuka Nimsara · Made with ♥ and a lot of coffee.
+        Copyright© 2026 <a href="${process.env.SITE_URL || 'https://www.chanukanimsara.com'}" style="color: #e8154a; text-decoration: none; font-weight: 600;">Chanuka Nimsara</a> - All Rights Reserved.
       </p>
     </td></tr>
   </table>
@@ -1009,12 +1009,12 @@ ${previewText ? `<div style="display:none;max-height:0;overflow:hidden;">${previ
           ${ctaBlock}
           <hr style="border:none;border-top:1px solid #f0f0f0;margin:40px 0 24px;">
           <p style="margin:0;color:#9ca3af;font-size:12px;text-align:center;">
-            You're receiving this because you subscribed at chanukanimsara.com.
+            You're receiving this because you subscribed at <a href="${process.env.SITE_URL || 'https://www.chanukanimsara.com'}" style="color: #e8154a; text-decoration: none; font-weight: 600;">chanukanimsara.com</a>.
           </p>
         </td></tr>
       </table>
       <p style="margin:24px 0 0;color:#9ca3af;font-size:12px;text-align:center;">
-        © 2026 Chanuka Nimsara · Made with ♥ and a lot of coffee.
+        Copyright© 2026 <a href="${process.env.SITE_URL || 'https://www.chanukanimsara.com'}" style="color: #e8154a; text-decoration: none; font-weight: 600;">Chanuka Nimsara</a> - All Rights Reserved.
       </p>
     </td></tr>
   </table>
@@ -1045,20 +1045,21 @@ async function triggerAutomaticPostNewsletter(entityType, docId, data) {
     let ctaText = '';
     let ctaUrl = '';
 
+    const siteUrl = process.env.SITE_URL || 'https://www.chanukanimsara.com';
     if (entityType === 'blog_post') {
       subject = `New Blog Post: ${data.title}`;
       previewText = `Read my latest blog post: "${data.title}"`;
       heading = `New Blog Post Published!`;
       body = `${data.excerpt || (data.content ? data.content.slice(0, 150) + '...' : '')}`;
       ctaText = `Read Post`;
-      ctaUrl = `http://localhost:3000/#blog`;
+      ctaUrl = `${siteUrl}/#blog`;
     } else {
       subject = `New Photo Post: ${data.title}`;
       previewText = `Check out my new photo post: "${data.title}"`;
       heading = `New Photos Uploaded!`;
       body = `Category: ${data.category || 'Travel'}.\n\n${data.description || 'Take a look at my new photos on the website.'}`;
       ctaText = `View Gallery`;
-      ctaUrl = `http://localhost:3000/#gallery`;
+      ctaUrl = `${siteUrl}/#gallery`;
     }
 
     const html = buildNewsletterHTML({ subject, previewText, heading, body, ctaText, ctaUrl });
