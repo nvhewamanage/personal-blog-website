@@ -1417,13 +1417,37 @@ app.get('/api/gallery-items', async (req, res) => {
 // Public view-counter — fired by the site whenever a visitor opens a photo post.
 app.post('/api/gallery-items/:id/view', publicLimiter, async (req, res) => {
   try {
-    await db.collection('gallery_items').doc(req.params.id).update({ views: admin.firestore.FieldValue.increment(1) });
-    if (cacheGalleryItems) {
+    const { email } = req.body;
+    if (!email || !validator.isEmail(String(email))) {
+      return res.status(400).json({ success: false, error: 'Valid email is required.' });
+    }
+    const normalizedEmail = String(email).toLowerCase().trim();
+    const recordId = `${normalizedEmail}_${req.params.id}`;
+    
+    const viewRef = db.collection('gallery_views').doc(recordId);
+    const itemRef = db.collection('gallery_items').doc(req.params.id);
+    
+    let incremented = false;
+    await db.runTransaction(async (transaction) => {
+      const viewDoc = await transaction.get(viewRef);
+      if (!viewDoc.exists) {
+        transaction.set(viewRef, {
+          email: normalizedEmail,
+          itemId: req.params.id,
+          timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+        transaction.update(itemRef, { views: admin.firestore.FieldValue.increment(1) });
+        incremented = true;
+      }
+    });
+    
+    if (incremented && cacheGalleryItems) {
       const cached = cacheGalleryItems.find(it => it.id === req.params.id);
       if (cached) cached.views = (cached.views || 0) + 1;
     }
-    res.json({ success: true });
+    res.json({ success: true, incremented });
   } catch (err) {
+    console.error('Gallery item view error:', err.message);
     res.status(500).json({ success: false });
   }
 });
@@ -1431,13 +1455,37 @@ app.post('/api/gallery-items/:id/view', publicLimiter, async (req, res) => {
 // Public like-counter — fired by the site whenever a visitor likes a photo post.
 app.post('/api/gallery-items/:id/like', publicLimiter, async (req, res) => {
   try {
-    await db.collection('gallery_items').doc(req.params.id).update({ likes: admin.firestore.FieldValue.increment(1) });
-    if (cacheGalleryItems) {
+    const { email } = req.body;
+    if (!email || !validator.isEmail(String(email))) {
+      return res.status(400).json({ success: false, error: 'Valid email is required.' });
+    }
+    const normalizedEmail = String(email).toLowerCase().trim();
+    const recordId = `${normalizedEmail}_${req.params.id}`;
+    
+    const likeRef = db.collection('gallery_likes').doc(recordId);
+    const itemRef = db.collection('gallery_items').doc(req.params.id);
+    
+    let incremented = false;
+    await db.runTransaction(async (transaction) => {
+      const likeDoc = await transaction.get(likeRef);
+      if (!likeDoc.exists) {
+        transaction.set(likeRef, {
+          email: normalizedEmail,
+          itemId: req.params.id,
+          timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+        transaction.update(itemRef, { likes: admin.firestore.FieldValue.increment(1) });
+        incremented = true;
+      }
+    });
+    
+    if (incremented && cacheGalleryItems) {
       const cached = cacheGalleryItems.find(it => it.id === req.params.id);
       if (cached) cached.likes = (cached.likes || 0) + 1;
     }
-    res.json({ success: true });
+    res.json({ success: true, incremented });
   } catch (err) {
+    console.error('Gallery item like error:', err.message);
     res.status(500).json({ success: false });
   }
 });
@@ -1638,13 +1686,37 @@ app.get('/api/blog-posts', async (req, res) => {
 
 app.post('/api/blog-posts/:id/view', publicLimiter, async (req, res) => {
   try {
-    await db.collection('blog_posts').doc(req.params.id).update({ views: admin.firestore.FieldValue.increment(1) });
-    if (cacheBlogPosts) {
+    const { email } = req.body;
+    if (!email || !validator.isEmail(String(email))) {
+      return res.status(400).json({ success: false, error: 'Valid email is required.' });
+    }
+    const normalizedEmail = String(email).toLowerCase().trim();
+    const recordId = `${normalizedEmail}_${req.params.id}`;
+    
+    const viewRef = db.collection('blog_views').doc(recordId);
+    const postRef = db.collection('blog_posts').doc(req.params.id);
+    
+    let incremented = false;
+    await db.runTransaction(async (transaction) => {
+      const viewDoc = await transaction.get(viewRef);
+      if (!viewDoc.exists) {
+        transaction.set(viewRef, {
+          email: normalizedEmail,
+          postId: req.params.id,
+          timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+        transaction.update(postRef, { views: admin.firestore.FieldValue.increment(1) });
+        incremented = true;
+      }
+    });
+    
+    if (incremented && cacheBlogPosts) {
       const cached = cacheBlogPosts.find(p => p.id === req.params.id);
       if (cached) cached.views = (cached.views || 0) + 1;
     }
-    res.json({ success: true });
+    res.json({ success: true, incremented });
   } catch (err) {
+    console.error('Blog post view error:', err.message);
     res.status(500).json({ success: false });
   }
 });
@@ -1652,13 +1724,37 @@ app.post('/api/blog-posts/:id/view', publicLimiter, async (req, res) => {
 // Public like-counter — fired by the site whenever a visitor likes a blog post.
 app.post('/api/blog-posts/:id/like', publicLimiter, async (req, res) => {
   try {
-    await db.collection('blog_posts').doc(req.params.id).update({ likes: admin.firestore.FieldValue.increment(1) });
-    if (cacheBlogPosts) {
+    const { email } = req.body;
+    if (!email || !validator.isEmail(String(email))) {
+      return res.status(400).json({ success: false, error: 'Valid email is required.' });
+    }
+    const normalizedEmail = String(email).toLowerCase().trim();
+    const recordId = `${normalizedEmail}_${req.params.id}`;
+    
+    const likeRef = db.collection('blog_likes').doc(recordId);
+    const postRef = db.collection('blog_posts').doc(req.params.id);
+    
+    let incremented = false;
+    await db.runTransaction(async (transaction) => {
+      const likeDoc = await transaction.get(likeRef);
+      if (!likeDoc.exists) {
+        transaction.set(likeRef, {
+          email: normalizedEmail,
+          postId: req.params.id,
+          timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+        transaction.update(postRef, { likes: admin.firestore.FieldValue.increment(1) });
+        incremented = true;
+      }
+    });
+    
+    if (incremented && cacheBlogPosts) {
       const cached = cacheBlogPosts.find(p => p.id === req.params.id);
       if (cached) cached.likes = (cached.likes || 0) + 1;
     }
-    res.json({ success: true });
+    res.json({ success: true, incremented });
   } catch (err) {
+    console.error('Blog post like error:', err.message);
     res.status(500).json({ success: false });
   }
 });
