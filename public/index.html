@@ -908,6 +908,67 @@
     .blog-modal-close:hover { background: rgba(255,255,255,.3); }
 
     /* ============================================================
+       EMAIL VERIFICATION MODAL
+       ============================================================ */
+    .email-modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(26,26,46,.85); backdrop-filter: blur(8px);
+      z-index: 3000; display: flex; align-items: center; justify-content: center;
+      padding: 24px; opacity: 0; pointer-events: none; transition: opacity .3s ease;
+    }
+    .email-modal-overlay.open { opacity: 1; pointer-events: auto; }
+    .email-modal {
+      background: var(--white); border-radius: 20px;
+      max-width: 420px; width: 100%; padding: 32px;
+      box-shadow: 0 32px 80px rgba(26,26,46,.3);
+      transform: scale(.93); transition: transform .3s cubic-bezier(.4,0,.2,1);
+      position: relative;
+    }
+    .email-modal-overlay.open .email-modal { transform: scale(1); }
+    .email-modal h3 {
+      font-family: var(--fd); font-size: 24px; color: var(--dark); margin-bottom: 12px;
+    }
+    .email-modal p {
+      font-size: 14px; color: var(--muted); line-height: 1.5; margin-bottom: 24px;
+    }
+    .email-modal .fg {
+      margin-bottom: 20px;
+    }
+    .email-modal .fg input {
+      width: 100%; padding: 14px 16px; border-radius: 12px;
+      border: 1.5px solid var(--border); background: var(--bg-alt);
+      color: var(--text); font-family: var(--fb); font-size: 14px;
+      transition: all var(--ease); outline: none;
+    }
+    .email-modal .fg input:focus {
+      border-color: var(--accent);
+      background: var(--white);
+    }
+    .email-modal-actions {
+      display: flex; gap: 12px; justify-content: flex-end;
+    }
+    .email-modal-btn {
+      padding: 12px 24px; border-radius: 30px; border: none;
+      font-family: var(--fb); font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: all var(--ease);
+    }
+    .email-modal-btn--cancel {
+      background: transparent; color: var(--muted);
+      border: 1.5px solid var(--border);
+    }
+    .email-modal-btn--cancel:hover {
+      background: var(--bg-alt);
+      color: var(--dark);
+    }
+    .email-modal-btn--submit {
+      background: var(--accent); color: #fff;
+    }
+    .email-modal-btn--submit:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px var(--accent-l);
+    }
+
+    /* ============================================================
        CHATBOT WIDGET
        ============================================================ */
     #chatWidget {
@@ -1299,6 +1360,23 @@
   </div>
 </div>
 
+<!-- ═══════════════ EMAIL PROMPT MODAL ═══════════════ -->
+<div class="email-modal-overlay" id="emailModal" onclick="if(event.target===this)closeEmailModal(null)">
+  <div class="email-modal">
+    <h3>Verify your email</h3>
+    <p>To help us maintain accurate statistics and prevent double counts, please enter your email address. We'll only ask you once!</p>
+    <form id="emailModalForm" onsubmit="handleEmailSubmit(event)">
+      <div class="fg">
+        <input type="email" id="emailModalInput" placeholder="name@example.com" required autocomplete="email" />
+      </div>
+      <div class="email-modal-actions">
+        <button type="button" class="email-modal-btn email-modal-btn--cancel" onclick="closeEmailModal(null)">Cancel</button>
+        <button type="submit" class="email-modal-btn email-modal-btn--submit">Continue</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- ═══════════════ FOOTER ═══════════════ -->
 <footer>
   Copyright© 2026 <a href="/" style="color: var(--accent); text-decoration: none; font-weight: 600;">Chanuka Nimsara</a> - All Rights Reserved.
@@ -1340,6 +1418,51 @@
 <script>
   /* ── THEME: fixed light (no system auto-change) ───────────── */
   document.documentElement.setAttribute('data-theme', 'light');
+
+  /* Email Verification Modal Logic */
+  let emailResolveFn = null;
+
+  function promptForEmail() {
+    return new Promise((resolve) => {
+      const savedEmail = localStorage.getItem('userEmail');
+      if (savedEmail) {
+        resolve(savedEmail);
+        return;
+      }
+      
+      emailResolveFn = resolve;
+      
+      const emailModal = document.getElementById('emailModal');
+      emailModal.classList.add('open');
+      
+      const input = document.getElementById('emailModalInput');
+      input.value = '';
+      input.style.borderColor = '';
+      input.focus();
+    });
+  }
+
+  function handleEmailSubmit(event) {
+    event.preventDefault();
+    const input = document.getElementById('emailModalInput');
+    const email = input.value.trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      input.style.borderColor = '#e8154a';
+      return;
+    }
+    
+    localStorage.setItem('userEmail', email);
+    closeEmailModal(email);
+  }
+
+  function closeEmailModal(resolvedValue = null) {
+    const emailModal = document.getElementById('emailModal');
+    emailModal.classList.remove('open');
+    if (emailResolveFn) {
+      emailResolveFn(resolvedValue);
+      emailResolveFn = null;
+    }
+  }
 
   /* Navbar scroll + active link */
   const navbar   = document.getElementById('navbar');
@@ -1427,18 +1550,20 @@
     btn.disabled = true;
     btn.innerHTML = 'Sending… <i class="fa-solid fa-spinner fa-spin"></i>';
     try {
+      const userEmailVal = document.getElementById('femail').value.trim();
       const res = await fetch('/send-message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: document.getElementById('fname').value.trim(),
-          email: document.getElementById('femail').value.trim(),
+          email: userEmailVal,
           subject: document.getElementById('fsubject').value.trim(),
           message: document.getElementById('fmessage').value.trim(),
         }),
       });
       const data = await res.json();
       if (data.success) {
+        localStorage.setItem('userEmail', userEmailVal);
         document.getElementById('form-success').style.display = 'flex';
         form.reset(); form.style.display = 'none';
         setTimeout(() => {
@@ -1478,6 +1603,7 @@
       });
       const result = await res.json();
       if (result.success) {
+        localStorage.setItem('userEmail', email);
         formDiv.style.display = "none";
         thanksMsg.style.display = "block";
         emailInput.value = "";
@@ -1586,14 +1712,23 @@
 
     // Fire-and-forget view counter — doesn't block the UI.
     if (el.dataset.id) {
-      fetch('/api/gallery-items/' + el.dataset.id + '/view', { method: 'POST' }).then(() => {
-        // Increment count locally immediately
-        const newViews = parseInt(el.dataset.views || 0) + 1;
-        el.dataset.views = newViews;
-        document.getElementById('gModalViews').textContent = newViews;
-        const cardViews = document.querySelector(`.g-views-${el.dataset.id}`);
-        if (cardViews) cardViews.textContent = newViews;
-      }).catch(() => {});
+      promptForEmail().then(email => {
+        if (!email) return; // user cancelled email prompt
+        fetch('/api/gallery-items/' + el.dataset.id + '/view', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        }).then(res => res.json()).then((data) => {
+          if (data.success && data.incremented) {
+            // Increment count locally immediately
+            const newViews = parseInt(el.dataset.views || 0) + 1;
+            el.dataset.views = newViews;
+            document.getElementById('gModalViews').textContent = newViews;
+            const cardViews = document.querySelector(`.g-views-${el.dataset.id}`);
+            if (cardViews) cardViews.textContent = newViews;
+          }
+        }).catch(() => {});
+      });
     }
   }
 
@@ -1720,14 +1855,23 @@
 
     // Fire-and-forget view counter — doesn't block the UI.
     if (article.dataset.id) {
-      fetch('/api/blog-posts/' + article.dataset.id + '/view', { method: 'POST' }).then(() => {
-        // Increment count locally immediately
-        const newViews = parseInt(article.dataset.views || 0) + 1;
-        article.dataset.views = newViews;
-        document.getElementById('bModalViews').textContent = newViews;
-        const cardViews = document.querySelector(`.b-views-${article.dataset.id}`);
-        if (cardViews) cardViews.textContent = newViews;
-      }).catch(() => {});
+      promptForEmail().then(email => {
+        if (!email) return; // user cancelled email prompt
+        fetch('/api/blog-posts/' + article.dataset.id + '/view', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        }).then(res => res.json()).then((data) => {
+          if (data.success && data.incremented) {
+            // Increment count locally immediately
+            const newViews = parseInt(article.dataset.views || 0) + 1;
+            article.dataset.views = newViews;
+            document.getElementById('bModalViews').textContent = newViews;
+            const cardViews = document.querySelector(`.b-views-${article.dataset.id}`);
+            if (cardViews) cardViews.textContent = newViews;
+          }
+        }).catch(() => {});
+      });
     }
   }
   function closeBlogModal() {
@@ -1736,7 +1880,7 @@
   }
 
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { closeGalleryModal(); closeBlogModal(); }
+    if (e.key === 'Escape') { closeGalleryModal(); closeBlogModal(); closeEmailModal(null); }
   });
 
   /* Back to top */
@@ -1928,22 +2072,39 @@
     if (localStorage.getItem('liked-g-' + id) === 'true') return; // already liked
 
     try {
-      const res = await fetch(`/api/gallery-items/${id}/like`, { method: 'POST' });
+      const email = await promptForEmail();
+      if (!email) return;
+
+      const res = await fetch(`/api/gallery-items/${id}/like`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
       const data = await res.json();
       if (data.success) {
         localStorage.setItem('liked-g-' + id, 'true');
-        // Update DOM counts instantly
-        const els = document.querySelectorAll(`.g-likes-${id}`);
-        els.forEach(el => {
-          const current = parseInt(el.textContent || 0);
-          el.textContent = current + 1;
-        });
-        // Find the card element and update dataset
-        const card = document.querySelector(`.g-item[data-id="${id}"]`);
-        if (card) {
-          card.dataset.likes = parseInt(card.dataset.likes || 0) + 1;
-          const btn = card.querySelector('.like-btn');
-          if (btn) btn.classList.add('liked');
+        
+        if (data.incremented) {
+          // Update DOM counts instantly
+          const els = document.querySelectorAll(`.g-likes-${id}`);
+          els.forEach(el => {
+            const current = parseInt(el.textContent || 0);
+            el.textContent = current + 1;
+          });
+          // Find the card element and update dataset
+          const card = document.querySelector(`.g-item[data-id="${id}"]`);
+          if (card) {
+            card.dataset.likes = parseInt(card.dataset.likes || 0) + 1;
+            const btn = card.querySelector('.like-btn');
+            if (btn) btn.classList.add('liked');
+          }
+        } else {
+          // Visually mark as liked locally
+          const card = document.querySelector(`.g-item[data-id="${id}"]`);
+          if (card) {
+            const btn = card.querySelector('.like-btn');
+            if (btn) btn.classList.add('liked');
+          }
         }
       }
     } catch (e) {
@@ -1960,26 +2121,43 @@
     if (localStorage.getItem('liked-g-' + id) === 'true') return;
 
     try {
-      const res = await fetch(`/api/gallery-items/${id}/like`, { method: 'POST' });
+      const email = await promptForEmail();
+      if (!email) return;
+
+      const res = await fetch(`/api/gallery-items/${id}/like`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
       const data = await res.json();
       if (data.success) {
         localStorage.setItem('liked-g-' + id, 'true');
-        const modalLikes = document.getElementById('gModalLikes');
-        if (modalLikes) {
-          modalLikes.textContent = parseInt(modalLikes.textContent || 0) + 1;
+        
+        if (data.incremented) {
+          const modalLikes = document.getElementById('gModalLikes');
+          if (modalLikes) {
+            modalLikes.textContent = parseInt(modalLikes.textContent || 0) + 1;
+          }
+          // Update card count
+          const els = document.querySelectorAll(`.g-likes-${id}`);
+          els.forEach(el => {
+            const current = parseInt(el.textContent || 0);
+            el.textContent = current + 1;
+          });
+          const card = document.querySelector(`.g-item[data-id="${id}"]`);
+          if (card) {
+            card.dataset.likes = parseInt(card.dataset.likes || 0) + 1;
+            const cardBtn = card.querySelector('.like-btn');
+            if (cardBtn) cardBtn.classList.add('liked');
+          }
+        } else {
+          const card = document.querySelector(`.g-item[data-id="${id}"]`);
+          if (card) {
+            const cardBtn = card.querySelector('.like-btn');
+            if (cardBtn) cardBtn.classList.add('liked');
+          }
         }
-        // Update card count
-        const els = document.querySelectorAll(`.g-likes-${id}`);
-        els.forEach(el => {
-          const current = parseInt(el.textContent || 0);
-          el.textContent = current + 1;
-        });
-        const card = document.querySelector(`.g-item[data-id="${id}"]`);
-        if (card) {
-          card.dataset.likes = parseInt(card.dataset.likes || 0) + 1;
-          const cardBtn = card.querySelector('.like-btn');
-          if (cardBtn) cardBtn.classList.add('liked');
-        }
+        
         // Update modal button state
         const btn = document.getElementById('gModalLikeBtn');
         if (btn) {
@@ -1998,34 +2176,61 @@
     if (localStorage.getItem('liked-b-' + id) === 'true') return;
 
     try {
-      const res = await fetch(`/api/blog-posts/${id}/like`, { method: 'POST' });
+      const email = await promptForEmail();
+      if (!email) return;
+
+      const res = await fetch(`/api/blog-posts/${id}/like`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
       const data = await res.json();
       if (data.success) {
         localStorage.setItem('liked-b-' + id, 'true');
-        // Update card likes count
-        const els = document.querySelectorAll(`.b-likes-${id}`);
-        els.forEach(el => {
-          const current = parseInt(el.textContent || 0);
-          el.textContent = current + 1;
-        });
-        // Find card and update dataset
-        const card = document.querySelector(`article[data-id="${id}"]`);
-        if (card) {
-          card.dataset.likes = parseInt(card.dataset.likes || 0) + 1;
-          const cardBtn = card.querySelector('.like-btn');
-          if (cardBtn) {
-            cardBtn.className = 'like-btn liked';
-            const icon = cardBtn.querySelector('i');
-            if (icon) icon.className = 'fa-solid fa-heart';
-            const text = cardBtn.querySelector('.like-label');
-            if (text) text.textContent = 'Liked';
+        
+        if (data.incremented) {
+          // Update card likes count
+          const els = document.querySelectorAll(`.b-likes-${id}`);
+          els.forEach(el => {
+            const current = parseInt(el.textContent || 0);
+            el.textContent = current + 1;
+          });
+          // Find card and update dataset
+          const card = document.querySelector(`article[data-id="${id}"]`);
+          if (card) {
+            card.dataset.likes = parseInt(card.dataset.likes || 0) + 1;
+            const cardBtn = card.querySelector('.like-btn');
+            if (cardBtn) {
+              cardBtn.className = 'like-btn liked';
+              const icon = cardBtn.querySelector('i');
+              if (icon) icon.className = 'fa-solid fa-heart';
+              const text = cardBtn.querySelector('.like-label');
+              if (text) text.textContent = 'Liked';
+            }
+          }
+          // Update modal if open
+          const modal = document.getElementById('blogModal');
+          if (modal.classList.contains('open') && modal.dataset.currentId === id) {
+            const modalLikes = document.getElementById('bModalLikes');
+            if (modalLikes) modalLikes.textContent = parseInt(modalLikes.textContent || 0) + 1;
+          }
+        } else {
+          // Visually mark as liked locally
+          const card = document.querySelector(`article[data-id="${id}"]`);
+          if (card) {
+            const cardBtn = card.querySelector('.like-btn');
+            if (cardBtn) {
+              cardBtn.className = 'like-btn liked';
+              const icon = cardBtn.querySelector('i');
+              if (icon) icon.className = 'fa-solid fa-heart';
+              const text = cardBtn.querySelector('.like-label');
+              if (text) text.textContent = 'Liked';
+            }
           }
         }
-        // Update modal if open
+        
         const modal = document.getElementById('blogModal');
         if (modal.classList.contains('open') && modal.dataset.currentId === id) {
-          const modalLikes = document.getElementById('bModalLikes');
-          if (modalLikes) modalLikes.textContent = parseInt(modalLikes.textContent || 0) + 1;
           const modalBtn = document.getElementById('bModalLikeBtn');
           if (modalBtn) {
             modalBtn.className = 'like-btn liked';
