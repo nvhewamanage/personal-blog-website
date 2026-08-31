@@ -28,7 +28,7 @@ An elegant, premium, and fully featured personal website, blog, and photo galler
 
 - **Backend**: Node.js, Express.js, Multer
 - **Database / Cloud**: Firebase Admin SDK (Firestore Database, Firebase Cloud Storage)
-- **Email Delivery**: Nodemailer (via Gmail SMTP)
+- **Email Delivery**: Resend Email Services
 - **Frontend**: Vanilla HTML5, CSS3 (Glassmorphism, custom dark mode, keyframe animations), Modern JavaScript (ES6)
 
 ---
