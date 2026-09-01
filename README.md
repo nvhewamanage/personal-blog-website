@@ -28,7 +28,7 @@ An elegant, premium, and fully featured personal website, blog, and photo galler
 
 - **Backend**: Node.js, Express.js, Multer
 - **Database / Cloud**: Firebase Admin SDK (Firestore Database, Firebase Cloud Storage)
-- **Email Delivery**: Nodemailer (via Gmail SMTP)
+- **Email Delivery**: Resend Email Services
 - **Frontend**: Vanilla HTML5, CSS3 (Glassmorphism, custom dark mode, keyframe animations), Modern JavaScript (ES6)
 
 ---
@@ -54,7 +54,6 @@ Create a `.env` file in the root directory:
 ```env
 PORT=3000
 GMAIL_USER=your-email@gmail.com
-GMAIL_PASS=your-gmail-app-password
 JWT_SECRET=your-jwt-auth-session-secret
 FIREBASE_STORAGE_BUCKET=your-project-id.firebasestorage.app
 ```
