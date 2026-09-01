@@ -54,7 +54,6 @@ Create a `.env` file in the root directory:
 ```env
 PORT=3000
 GMAIL_USER=your-email@gmail.com
-GMAIL_PASS=your-gmail-app-password
 JWT_SECRET=your-jwt-auth-session-secret
 FIREBASE_STORAGE_BUCKET=your-project-id.firebasestorage.app
 ```
