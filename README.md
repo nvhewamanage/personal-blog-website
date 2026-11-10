@@ -4,7 +4,7 @@ An elegant, premium, and fully featured personal website, blog, and photo galler
 
 ---
 
-## 1. Key Features
+## 1. Key Features and specialities
 
 ### 1.1 Photo Gallery & Blog
 - **Dynamic Capped Feeds**: Public feeds display the freshest content (capped at 8 gallery items and 4 blog posts) while older items automatically roll off to optimize load performance.
